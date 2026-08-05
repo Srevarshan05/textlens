@@ -144,7 +144,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "Examples:\n"
             "  textlens models\n"
             "  textlens model install glm-ocr\n"
-            "  textlens model info florence2\n"
+            "  textlens model info smolvlm\n"
             "  textlens model remove smolvlm\n"
             "  textlens doctor\n"
             "  textlens read invoice.png\n"

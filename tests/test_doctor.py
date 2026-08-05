@@ -75,23 +75,6 @@ class TestDeterministicRules:
         rec, _ = _rule_for_model("smolvlm", vram_gb=1.0, cuda_available=True)
         assert rec == Recommendation.SUPPORTED
 
-    # ── Florence-2 ─────────────────────────────────────────────────────
-    def test_florence2_excellent_with_4gb(self):
-        rec, _ = _rule_for_model("florence2", vram_gb=4.0, cuda_available=True)
-        assert rec == Recommendation.EXCELLENT
-
-    def test_florence2_supported_on_cpu(self):
-        rec, _ = _rule_for_model("florence2", vram_gb=0.0, cuda_available=False)
-        assert rec == Recommendation.SUPPORTED
-
-    def test_florence2_supported_with_2gb(self):
-        rec, _ = _rule_for_model("florence2", vram_gb=2.0, cuda_available=True)
-        assert rec == Recommendation.SUPPORTED
-
-    def test_florence2_not_recommended_with_1gb(self):
-        rec, _ = _rule_for_model("florence2", vram_gb=1.0, cuda_available=True)
-        assert rec == Recommendation.NOT_RECOMMENDED
-
     # ── GLM OCR ────────────────────────────────────────────────────────
     def test_glm_ocr_excellent_with_6gb(self):
         rec, _ = _rule_for_model("glm-ocr", vram_gb=6.0, cuda_available=True)
@@ -144,7 +127,7 @@ class TestEvaluateRecommendations:
     def test_returns_one_recommendation_per_model(self):
         profile = _make_profile(vram_gb=8.0, cuda=True)
         recs = _evaluate_recommendations(profile)
-        assert len(recs) == 6
+        assert len(recs) == 5
 
     def test_all_excellent_with_8gb(self):
         profile = _make_profile(vram_gb=8.0, cuda=True)
@@ -170,7 +153,6 @@ class TestEvaluateRecommendations:
         recs = _evaluate_recommendations(profile)
         levels = {r.model.id: r.level for r in recs}
         assert levels["glm-ocr"] == Recommendation.SUPPORTED
-        assert levels["florence2"] == Recommendation.EXCELLENT
         assert levels["smolvlm"] == Recommendation.EXCELLENT
 
 
@@ -183,7 +165,7 @@ class TestHardwareDoctor:
             report = doctor.run()
             assert isinstance(report, DoctorReport)
             assert report.profile == profile
-            assert len(report.recommendations) == 6
+            assert len(report.recommendations) == 5
 
     def test_print_report_does_not_raise(self, capsys):
         from textlens.models.doctor import DoctorReport

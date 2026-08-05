@@ -115,32 +115,6 @@ _CATALOG: List[ModelMetadata] = [
         download_size_gb=2.0,
     ),
 
-    # ── 4. Florence-2 ──────────────────────────────────────────────────────
-    ModelMetadata(
-        id="florence2",
-        display_name="Florence-2 Base",
-        category="Vision Foundation Model",
-        parameters="770M",
-        use_cases=[
-            "Fast OCR",
-            "Captioning",
-            "Detection",
-            "Grounding",
-            "General Vision",
-        ],
-        min_vram_gb=4.0,
-        min_recommendation="4 GB VRAM",
-        cpu_supported=True,
-        is_default=False,
-        hf_repo_id="microsoft/Florence-2-base",
-        description=(
-            "Microsoft Florence-2 vision foundation model. Supports OCR, "
-            "image captioning, object detection, and visual grounding at "
-            "excellent speed with low memory requirements."
-        ),
-        download_size_gb=1.5,
-    ),
-
     # ── 5. SmolVLM ─────────────────────────────────────────────────────────
     ModelMetadata(
         id="smolvlm",

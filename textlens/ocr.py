@@ -24,7 +24,7 @@ Usage
     text = ocr.read("photo.jpg")
 
     # Force a specific device
-    ocr = OCR(model="florence2", device="cpu")
+    ocr = OCR(model="smolvlm", device="cpu")
 
     # Pre-download without running inference
     OCR.ensure("glm-ocr")
@@ -78,7 +78,7 @@ class OCR:
 
         >>> from textlens import OCR
         >>> ocr = OCR()                        # uses glm-ocr
-        >>> ocr = OCR(model="florence2")       # switch model
+        >>> ocr = OCR(model="smolvlm")         # switch model
         >>> ocr = OCR(model="smolvlm", device="cpu")
         >>> text = ocr.read("document.png")
     """
@@ -272,9 +272,9 @@ def _resolve_backend(model_id: str, device: Optional[str], **kwargs: Any) -> Any
         from textlens.backends.smolvlm import SmolVLMBackend
         return SmolVLMBackend(device=device, **kwargs)
 
-    if model_id == "florence2":
-        from textlens.backends.florence2 import Florence2Backend
-        return Florence2Backend(device=device, **kwargs)
+    if model_id == "lighton-ocr":
+        from textlens.backends.lighton_ocr import LightOnOCRBackend
+        return LightOnOCRBackend(device=device, **kwargs)
 
     # For models without a dedicated backend yet, raise a helpful message
     from textlens.models.exceptions import TextLensError

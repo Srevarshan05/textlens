@@ -20,7 +20,7 @@ class TestModelManagerModels:
     def test_models_returns_list(self, capsys):
         result = ModelManager.models()
         assert isinstance(result, list)
-        assert len(result) == 6
+        assert len(result) == 5
 
     def test_models_contains_glm_ocr(self, capsys):
         result = ModelManager.models()
@@ -32,7 +32,7 @@ class TestModelManagerModels:
         ids = {m.id for m in result}
         expected = {
             "glm-ocr", "lighton-ocr", "hunyuan-ocr",
-            "florence2", "smolvlm", "paddleocr",
+            "smolvlm", "paddleocr",
         }
         assert ids == expected
 
