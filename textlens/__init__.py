@@ -1,32 +1,58 @@
 """
-TextLens - High-Performance Python OCR Framework
-=================================================
+TextLens — Multi-Model OCR Framework
+======================================
 
-An easy-to-use Python SDK and 1-line REST endpoint server for reading text,
-tables, formulas, and structured documents using GLM-OCR with GPU auto-detection.
+A modular, production-ready Python OCR framework supporting multiple
+officially registered models through a unified API.
 
-Hardware Check & CUDA Setup:
-    >>> import textlens
-    >>> print(textlens.is_cuda_available())
-    True
-    >>> textlens.print_hardware_status()
+Quickstart
+----------
+::
 
-Dependency Auto-Healing:
-    >>> textlens.ensure_dependencies(auto_install=True)
+    from textlens import OCR
 
-Quickstart SDK:
-    >>> from textlens import TextLens
-    >>> ocr = TextLens()
-    >>> text = ocr.read("invoice.png")
+    # Default model (GLM-OCR)
+    ocr = OCR()
+    text = ocr.read("invoice.png")
 
-Serve REST API Endpoint:
-    >>> import textlens
-    >>> textlens.serve(port=8000)
+    # Switch model
+    ocr = OCR(model="smolvlm")
+
+Model Management
+----------------
+::
+
+    from textlens import ModelManager
+
+    ModelManager.models()
+    ModelManager.download("glm-ocr")
+    ModelManager.info("florence2")
+
+Hardware Doctor
+---------------
+::
+
+    from textlens.models import HardwareDoctor
+
+    doctor = HardwareDoctor()
+    report = doctor.run()
+    doctor.print_report(report)
+
+Legacy SDK (GLM-OCR only)
+-------------------------
+::
+
+    from textlens import TextLens
+    ocr = TextLens()
+    text = ocr.read("sample.png")
 """
 
-__version__ = "0.1.0"
+from __future__ import annotations
+
+__version__ = "0.2.0"
 __author__ = "TextLens Contributors"
 
+# ── Legacy hardware API (backwards compatible) ──────────────────────────────
 from textlens.hardware import (
     HardwareInfo,
     SystemCUDADetails,
@@ -36,15 +62,60 @@ from textlens.hardware import (
     get_hardware_info,
     print_hardware_status,
 )
+
+# ── Legacy dependency API (backwards compatible) ────────────────────────────
 from textlens.dependencies import (
     DependencyReport,
     check_dependencies,
     ensure_dependencies,
 )
+
+# ── Legacy SDK (backwards compatible) ───────────────────────────────────────
 from textlens.sdk import TextLens
+
+# ── Server (backwards compatible) ───────────────────────────────────────────
 from textlens.server import create_app, serve
 
+# ── New Model Registry API ──────────────────────────────────────────────────
+from textlens.models import (
+    ModelMetadata,
+    ModelRegistry,
+    ModelManager,
+    ModelCache,
+    ModelDownloader,
+    HardwareDoctor,
+    HardwareProfile,
+    inspect_hardware,
+    BaseOCRModel,
+    # Exceptions
+    TextLensError,
+    UnknownModelError,
+    ModelNotInstalledError,
+    DownloadError,
+)
+
+# ── High-level OCR API ──────────────────────────────────────────────────────
+from textlens.ocr import OCR
+
+
 __all__ = [
+    # ── New API ────────────────────────────────────────────────────────
+    "OCR",
+    "ModelMetadata",
+    "ModelRegistry",
+    "ModelManager",
+    "ModelCache",
+    "ModelDownloader",
+    "HardwareDoctor",
+    "HardwareProfile",
+    "inspect_hardware",
+    "BaseOCRModel",
+    # Exceptions
+    "TextLensError",
+    "UnknownModelError",
+    "ModelNotInstalledError",
+    "DownloadError",
+    # ── Legacy API ─────────────────────────────────────────────────────
     "TextLens",
     "HardwareInfo",
     "SystemCUDADetails",
