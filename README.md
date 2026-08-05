@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Text-Lens.png" alt="TextLens Framework Banner" width="100%"/>
+  <img src="Text-Lens.png" alt="TextLens Framework Banner" width="350"/>
 </p>
 
 # TextLens 🔍
