@@ -100,4 +100,4 @@ class TestModelManagerIsInstalled:
 
     def test_is_installed_true_when_cached(self):
         with patch("textlens.models.manager._cache.is_installed", return_value=True):
-            assert ModelManager.is_installed("florence2") is True
+            assert ModelManager.is_installed("smolvlm") is True

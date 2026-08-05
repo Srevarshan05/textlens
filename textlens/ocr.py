@@ -276,6 +276,10 @@ def _resolve_backend(model_id: str, device: Optional[str], **kwargs: Any) -> Any
         from textlens.backends.lighton_ocr import LightOnOCRBackend
         return LightOnOCRBackend(device=device, **kwargs)
 
+    if model_id == "hunyuan-ocr":
+        from textlens.backends.hunyuan_ocr import HunyuanOCRBackend
+        return HunyuanOCRBackend(device=device, **kwargs)
+
     # For models without a dedicated backend yet, raise a helpful message
     from textlens.models.exceptions import TextLensError
     raise TextLensError(

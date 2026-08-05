@@ -109,26 +109,31 @@ class ModelManager:
                 padding=(0, 2),
                 expand=True,
             )
-            table.add_column("Model", min_width=18, style="bold white")
-            table.add_column("Category", min_width=22, style="dim")
+            table.add_column("Model ID", min_width=14, style="bold yellow")
+            table.add_column("Official HF Repo", min_width=24, style="dim cyan")
             table.add_column("Params", min_width=8, justify="right")
-            table.add_column("Use Cases", min_width=28)
-            table.add_column("Hardware", min_width=14, style="dim")
+            table.add_column("Use Cases", min_width=30)
+            table.add_column("Hardware", min_width=12, style="dim")
             table.add_column("Installed", min_width=10, justify="center")
+
+            tag_colors = ["cyan", "green", "magenta", "yellow", "bright_cyan", "bright_green"]
 
             for meta in catalog:
                 installed = _cache.is_installed(meta.id)
                 installed_text = Text("✓ Yes", style="bold green") if installed else Text("✗ No", style="dim red")
                 default_tag = " [Default]" if meta.is_default else ""
-                use_cases = ", ".join(meta.use_cases[:4])
-                if len(meta.use_cases) > 4:
-                    use_cases += f" +{len(meta.use_cases) - 4} more"
+
+                colored_tags = [
+                    f"[{tag_colors[i % len(tag_colors)]}]{tag}[/{tag_colors[i % len(tag_colors)]}]"
+                    for i, tag in enumerate(meta.use_cases[:2])
+                ]
+                use_cases_formatted = ", ".join(colored_tags)
 
                 table.add_row(
-                    f"{meta.display_name}{default_tag}",
-                    meta.category,
+                    f"{meta.id}{default_tag}",
+                    meta.hf_repo_id,
                     meta.parameters,
-                    use_cases,
+                    use_cases_formatted,
                     meta.min_recommendation,
                     installed_text,
                 )
@@ -137,12 +142,12 @@ class ModelManager:
             console.print(
                 Panel(
                     table,
-                    title="[bold]TextLens — Supported Models[/bold]",
+                    title="[bold]TextLens — Official Supported Models Catalog[/bold]",
                     border_style="cyan",
                 )
             )
             console.print(
-                "[dim]Use [bold]textlens model install <id>[/bold] to download a model.[/dim]\n"
+                "[dim]Use [bold]OCR(model='<Model ID>')[/bold] or [bold]textlens model install <Model ID>[/bold] to use a model.[/dim]\n"
             )
         except ImportError:
             cls._print_models_plain(catalog)
@@ -161,7 +166,7 @@ class ModelManager:
             print(f"  ID        : {meta.id}")
             print(f"  Category  : {meta.category}")
             print(f"  Params    : {meta.parameters}")
-            print(f"  Use Cases : {', '.join(meta.use_cases[:4])}")
+            print(f"  Use Cases : {', '.join(meta.use_cases[:2])}")
             print(f"  Hardware  : {meta.min_recommendation}")
             print(f"  {inst_label}")
             print(sep)

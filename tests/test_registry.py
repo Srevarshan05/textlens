@@ -17,16 +17,15 @@ EXPECTED_IDS = {
     "glm-ocr",
     "lighton-ocr",
     "hunyuan-ocr",
-    "florence2",
     "smolvlm",
     "paddleocr",
 }
 
 
 class TestModelRegistry:
-    def test_all_returns_six_models(self):
+    def test_all_returns_five_models(self):
         models = ModelRegistry.all()
-        assert len(models) == 6
+        assert len(models) == 5
 
     def test_supported_ids_are_correct(self):
         ids = set(ModelRegistry.supported_ids())
@@ -39,8 +38,8 @@ class TestModelRegistry:
         assert meta.display_name == "GLM OCR"
 
     def test_get_normalized_aliases(self):
-        assert ModelRegistry.get("Florence-2").id == "florence2"
-        assert ModelRegistry.get("florence-2").id == "florence2"
+        assert ModelRegistry.get("LightOnOCR").id == "lighton-ocr"
+        assert ModelRegistry.get("lighton-ocr").id == "lighton-ocr"
         assert ModelRegistry.get("GLM-OCR").id == "glm-ocr"
         assert ModelRegistry.get("GLM OCR").id == "glm-ocr"
         assert ModelRegistry.get("SmolVLM").id == "smolvlm"
