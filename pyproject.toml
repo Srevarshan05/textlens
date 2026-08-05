@@ -5,13 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "textlens"
 version = "0.1.0"
-description = "A Python framework that reads text, tables, formulas, and structured data using GLM-OCR — with GPU auto-detection and a REST server mode."
+description = "A Python framework for high-customization GLM-OCR text extraction, GPU auto-detection, and 1-line REST endpoint serving."
 readme = "README.md"
 authors = [
     { name = "TextLens Team", email = "dev@textlens.org" }
 ]
 license = { text = "MIT" }
 requires-python = ">=3.8"
+keywords = ["ocr", "glm-ocr", "deep-learning", "pytorch", "document-ai", "pdf-ocr", "fastapi", "rest-api"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

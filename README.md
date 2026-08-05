@@ -1,31 +1,64 @@
-<p align="center">
-  <img src="Text-Lens.png" alt="TextLens Logo" width="380" />
-</p>
+# TextLens 🔍
 
-# textlens
+[![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-blue.svg)](https://pypi.org/project/textlens/)
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)](https://python.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-CUDA%20%7C%20CPU-orange.svg)](https://pytorch.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[![PyPI Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/Srevarshan05/textlens)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-green.svg)](https://www.python.org/downloads/)
-[![CUDA Acceleration](https://img.shields.io/badge/CUDA-Supported-brightgreen.svg)](https://developer.nvidia.com/cuda-zone)
-
-> **A high-performance, developer-friendly Python OCR framework wrapping GLM-OCR (`zai-org/GLM-OCR`).**  
-> Features automatic GPU (PyTorch CUDA) / CPU hardware detection, single-line REST API server hosting, multi-page PDF processing, table-to-Markdown formatting, math LaTeX rendering, structured JSON schema extraction, and dynamic runtime device migration.
+**TextLens** is a high-performance Python framework for developer-friendly OCR text extraction powered by GLM-OCR (`zai-org/GLM-OCR`). Designed for maximum developer flexibility, TextLens features **automatic CUDA driver detection & PyTorch CUDA setup diagnostics**, **high customization for tables, formulas, and structured JSON**, and **1-line REST API endpoint serving** with automatic Swagger UI documentation.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-- **⚡ Hardware Auto-Detection**: Instant PyTorch CUDA / CPU introspection (`torch.cuda.is_available()`, GPU model name, total & allocated VRAM, CUDA runtime status).
-- **📄 Complete Document Reading**: Read text from local images (`PNG`, `JPG`, `WEBP`), multi-page `PDF` documents, or remote HTTP/HTTPS URLs.
-- **📊 Specialized Extractions**: Built-in methods for **Tables → Markdown**, **Formulas → LaTeX**, and **Documents → Structured JSON**.
-- **🔄 Dynamic Device Migration**: Switch model execution dynamically between GPU (`cuda`) and CPU (`cpu`) at runtime with cache optimization (`torch.cuda.empty_cache()`).
-- **🌐 One-Line REST API Server**: Spin up a FastAPI REST API microservice with interactive OpenAPI Swagger UI (`/docs`).
-- **🛠️ Built-in CLI**: Run hardware diagnostics, perform terminal OCR, or host the REST server directly from command line.
+- ⚡ **Automated System CUDA Doctor**: Queries system `nvidia-smi`, extracts host GPU CUDA driver version (e.g. `13.1`, `12.4`, `11.8`), and provides the exact PyTorch index URL command for any user's PC.
+- 🎯 **GLM-OCR Vision Engine Core**: High accuracy extraction for standard text, complex Markdown tables, LaTeX mathematical equations, and key-value JSON objects.
+- 🚀 **1-Line REST API Server**: Spin up a production-ready microservice with `textlens.serve(port=8000)` featuring full OpenAPI interactive Swagger documentation (`/docs`).
+- 📄 **Multi-Page PDF Processing**: Built-in high-resolution PDF rendering and page-by-page OCR extraction using `pypdfium2`.
+- ⚙️ **Dynamic Runtime Device Switching**: Instantly toggle model execution between `cuda` and `cpu` on the fly (`ocr.switch_device("cpu")`).
+- 📦 **PyPI Packaging Ready**: Clean standard library structure ready for `pip install textlens`.
 
 ---
 
-## 📦 Installation
+## Smart System CUDA GPU Setup Doctor
+
+TextLens automatically inspects system hardware so developers and users don't have to manually figure out which PyTorch CUDA wheel matches their graphics driver:
+
+```python
+import textlens
+
+# Check CUDA availability programmatically
+if textlens.is_cuda_available():
+    print("✅ Running with NVIDIA CUDA GPU Acceleration!")
+else:
+    # Introspect system GPU & get exact installation command for this machine
+    sys_cuda = textlens.detect_system_cuda()
+    if sys_cuda.has_nvidia_gpu:
+        print(f"Detected GPU with CUDA Driver {sys_cuda.system_cuda_version}")
+        print("Run this command to enable GPU acceleration:")
+        print(f"  {sys_cuda.recommended_install_command}")
+
+# Print detailed hardware diagnostic banner
+textlens.print_hardware_status()
+```
+
+CLI Command:
+```bash
+# Run CUDA GPU Doctor Diagnostic
+textlens doctor
+```
+
+### CPU vs GPU Performance Notice
+
+> [!WARNING]
+> **CPU vs GPU Performance Notice**:
+> While TextLens fully supports CPU execution as a fallback, running GLM-OCR on CPU will be **significantly slower** than NVIDIA CUDA GPU acceleration, especially when processing multi-page PDFs or high-resolution documents. For production workloads and large document batches, **a CUDA-enabled GPU is strongly recommended**.
+
+---
+
+## Installation
+
+Install TextLens via `pip`:
 
 ```bash
 pip install textlens
@@ -41,157 +74,111 @@ pip install -e .
 
 ---
 
-## ⚙️ Hardware Introspection (GPU vs CPU)
-
-TextLens automatically inspects system hardware using PyTorch upon initialization. Developers can also query hardware capabilities programmatically or print a clean summary:
-
-```python
-import textlens
-
-# Print hardware & device summary to terminal
-textlens.print_hardware_status()
-
-# Or retrieve structured hardware object
-hw = textlens.get_hardware_info()
-print(f"GPU Available : {hw.gpu_available}")
-print(f"Active Device : {hw.device_type}")
-print(f"GPU Name      : {hw.gpu_name}")
-print(f"Total VRAM    : {hw.vram_total_gb} GB")
-```
-
-**Console Output:**
-```text
-============================================================
-           TEXTLENS HARDWARE & DEVICE STATUS           
-============================================================
- PyTorch Version : 2.2.0
- CUDA Compiled   : 12.1
- CPU Cores       : 16
- CUDA (GPU)      : ✅ AVAILABLE (100% Accelerated)
- GPU Model       : NVIDIA GeForce RTX 3080
- Total VRAM      : 10.0 GB
- VRAM Allocated  : 0.45 GB
- Active Target   : CUDA (Default model target: 'cuda')
-============================================================
-```
-
----
-
-## 💡 Quickstart: Python SDK
+## Quickstart (Python SDK)
 
 ### 1. Basic Text Extraction
 
 ```python
 from textlens import TextLens
 
-# Auto-detects GPU (CUDA) or CPU
+# Auto-detects CUDA GPU or CPU
 ocr = TextLens()
 
-# Extract text from local image or remote URL
-text = ocr.read("sample_receipt.jpg")
+# Extract text from local image or URL
+text = ocr.read("invoice.png")
 print("Extracted Text:\n", text)
 ```
 
-### 2. Multi-Page PDF Reading
+### 2. High Customization: Markdown Tables, LaTeX Formulas & JSON
 
 ```python
-# Render and extract text from every page of a PDF
-pages = ocr.read_pdf("financial_report.pdf")
+from textlens import TextLens
 
-for item in pages:
-    print(f"\n--- Page {item['page']} of {item['total_pages']} ---")
-    print(item["text"])
-```
+ocr = TextLens()
 
-### 3. Specialized Extractions (Tables, Formulas, JSON)
+# Extract Markdown Table
+table_md = ocr.extract_table("financial_report.png")
+print(table_md)
 
-```python
-# Extract table as Markdown
-markdown_table = ocr.extract_table("data_table.png")
+# Extract LaTeX Math Formulas
+formula_latex = ocr.extract_formula("math_sheet.png")
+print(formula_latex)
 
-# Extract mathematical equations as LaTeX
-latex_formula = ocr.extract_formula("math_problem.jpg")
-
-# Extract document fields as structured JSON
+# Extract Structured JSON with Schema
 json_output = ocr.extract_json(
-    "invoice.pdf",
-    schema='{"invoice_number": "string", "total_amount": "float", "date": "string"}'
+    "receipt.jpg",
+    schema='{"vendor": "str", "amount": "float", "date": "YYYY-MM-DD"}'
 )
+print(json_output)
 ```
 
-### 4. Dynamic Runtime Device Switching (CUDA ↔ CPU)
+### 3. Multi-Page PDF Processing
 
 ```python
-# Switch model to CPU on demand
-ocr.switch_device("cpu")
-text_cpu = ocr.read("document.png")
+# Process multi-page PDF document
+pdf_pages = ocr.read_pdf("contract.pdf", max_pages=5)
 
-# Switch back to GPU (CUDA)
-ocr.switch_device("cuda")
-text_gpu = ocr.read("document.png")
+for page in pdf_pages:
+    print(f"--- Page {page['page']} of {page['total_pages']} ---")
+    print(page["text"])
+```
+
+### 4. Dynamic Device Switching
+
+```python
+# Dynamically switch execution device at runtime
+ocr.switch_device("cpu")   # Moves model weights to CPU
+ocr.switch_device("cuda")  # Moves model weights back to CUDA GPU
 ```
 
 ---
 
-## 🌐 One-Line REST API Server Hosting
+## Serving a REST API Endpoint
 
-Developers can host a production-ready REST API endpoint in **one line of Python** or via the CLI:
+Deploy an OCR microservice using a single function call:
 
-### Option A: Python Code
 ```python
 import textlens
 
-# Launch FastAPI REST server on port 8000
+# Launch REST API server on host 0.0.0.0, port 8000
 textlens.serve(host="0.0.0.0", port=8000)
 ```
 
-### Option B: Command Line Interface (CLI)
-```bash
-textlens serve --port 8000
-```
-
-Once running:
-- **Interactive Swagger Docs**: `http://localhost:8000/docs`
-- **OCR REST Endpoint**: `http://localhost:8000/api/v1/ocr`
-- **Hardware Info Endpoint**: `http://localhost:8000/api/v1/hardware`
+Once launched, access interactive OpenAPI / Swagger UI documentation at:
+👉 **`http://localhost:8000/docs`**
 
 ---
 
-## 📡 REST API Endpoint Integration Guide
+## REST Endpoint API Usage Guide
 
-Any application (web, mobile, backend server, scripts) can send requests to the served URL.
+### 1. Main OCR Endpoint (`POST /api/v1/ocr`)
 
-### 1. cURL Example (File Upload)
-
+#### A. File Upload Request (cURL)
 ```bash
 curl -X POST "http://localhost:8000/api/v1/ocr" \
-  -F "file=@/path/to/invoice.png" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@/path/to/document.png" \
   -F "prompt=Text Recognition:"
 ```
 
-### 2. Python (`requests`) Example
-
+#### B. File Upload Request (Python `requests`)
 ```python
 import requests
 
-# File upload request
 url = "http://localhost:8000/api/v1/ocr"
-files = {"file": open("invoice.png", "rb")}
-data = {"prompt": "Text Recognition:"}
+with open("invoice.png", "rb") as f:
+    files = {"file": f}
+    data = {"prompt": "Text Recognition:", "max_new_tokens": "512"}
+    response = requests.post(url, files=files, data=data)
 
-response = requests.post(url, files=files, data=data)
-result = response.json()
-
-print("Status:", result["status"])
-print("Device Used:", result["device_used"])
-print("Text:", result["text"])
+print(response.json())
 ```
 
-### 3. JavaScript (`fetch`) Example
-
+#### C. JavaScript `fetch` Request
 ```javascript
 const formData = new FormData();
-formData.append("file", fileInputElement.files[0]);
+formData.append("file", fileInput.files[0]);
 formData.append("prompt", "Text Recognition:");
 
 fetch("http://localhost:8000/api/v1/ocr", {
@@ -199,32 +186,73 @@ fetch("http://localhost:8000/api/v1/ocr", {
   body: formData
 })
   .then(res => res.json())
-  .then(data => {
-    console.log("Extracted Text:", data.text);
-    console.log("Execution Time (s):", data.execution_time_seconds);
-  });
+  .then(data => console.log("OCR Result:", data.text));
+```
+
+### 2. JSON Payload Endpoint (`POST /api/v1/ocr/json-payload`)
+
+#### Python `requests`
+```python
+import requests
+
+url = "http://localhost:8000/api/v1/ocr/json-payload"
+payload = {
+    "image_url": "https://example.com/sample_invoice.png",
+    "prompt": "Text Recognition:",
+    "max_new_tokens": 512
+}
+
+response = requests.post(url, json=payload)
+print(response.json())
 ```
 
 ---
 
-## 🖥️ Command Line Interface (CLI) Usage
+## Command Line Interface (CLI)
+
+TextLens includes a built-in CLI command:
 
 ```bash
-# Print system GPU/CPU hardware diagnostic status
-textlens hardware
+# Run CUDA GPU Doctor Diagnostic & Introspection
+textlens doctor
 
-# Run OCR directly on a local file or URL
-textlens read document.jpg
+# Run OCR on an image file or PDF
+textlens read document.png --prompt "Text Recognition:"
 
-# Run PDF OCR with custom prompt
-textlens read report.pdf --prompt "Extract table content:"
-
-# Launch REST API server
-textlens serve --host 0.0.0.0 --port 8000
+# Launch REST API endpoint server
+textlens serve --port 8000
 ```
 
 ---
 
-## 📄 License
+## Testing & PyPI Publishing Guide
 
-Distributed under the [MIT License](LICENSE).
+### Running Automated Tests
+Run unit tests using python `unittest`:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
+
+### Building & Pushing to PyPI
+
+1. Install build tools:
+   ```bash
+   pip install build twine
+   ```
+
+2. Build source distribution and wheel:
+   ```bash
+   python -m build
+   ```
+
+3. Upload package to PyPI:
+   ```bash
+   twine upload dist/*
+   ```
+
+---
+
+## License
+
+MIT License © TextLens Contributors

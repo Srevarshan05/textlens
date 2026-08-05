@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+include pyproject.toml
+include requirements.txt
+recursive-include textlens *.py

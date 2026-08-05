@@ -11,26 +11,23 @@ from __future__ import annotations
 import time
 import tempfile
 from pathlib import Path
+from contextlib import asynccontextmanager
 from typing import Optional, Any, Dict
 
 from pydantic import BaseModel, Field
 
-try:
-    import fastapi
-    from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Query, Body
-    from fastapi.middleware.cors import CORSMiddleware
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
+from textlens.dependencies import ensure_dependencies
 
-try:
-    import uvicorn
-    UVICORN_AVAILABLE = True
-except ImportError:
-    UVICORN_AVAILABLE = False
+# Ensure dependencies are available before importing FastAPI/Uvicorn
+ensure_dependencies(auto_install=True, verbose=False)
+
+import fastapi
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Query, Body
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
 from textlens.sdk import TextLens
-from textlens.hardware import get_hardware_info
+from textlens.hardware import get_hardware_info, is_cuda_available
 
 
 class OCRUrlRequest(BaseModel):
@@ -54,24 +51,29 @@ def create_app(engine: Optional[TextLens] = None) -> FastAPI:
     FastAPI
         Configured FastAPI app.
     """
-    if not FASTAPI_AVAILABLE:
-        raise ImportError(
-            "fastapi and python-multipart are required for REST server mode. "
-            "Install via `pip install fastapi uvicorn python-multipart`"
-        )
+    # Global engine reference container
+    _engine_holder: Dict[str, Any] = {"engine": engine}
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if _engine_holder["engine"] is None:
+            print("[TextLens Server] Initializing OCR engine model...")
+            _engine_holder["engine"] = TextLens()
+        yield
 
     app = FastAPI(
         title="TextLens OCR API",
         description=(
-            "Production-ready GLM-OCR REST endpoint server. "
-            "Supports image uploads, URL document reading, table/formula extraction, and hardware introspection."
+            "Production-ready GLM-OCR REST endpoint server framework. "
+            "Supports image file uploads, remote URL reading, table/formula extraction, and hardware status."
         ),
         version="0.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
-    # Enable CORS for easy cross-origin web app integration
+    # Enable CORS for easy cross-origin integration
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -80,24 +82,17 @@ def create_app(engine: Optional[TextLens] = None) -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Global engine reference
-    _engine_holder: Dict[str, Any] = {"engine": engine}
-
-    @app.on_event("startup")
-    def startup_event():
-        if _engine_holder["engine"] is None:
-            print("[TextLens Server] Initializing OCR engine model...")
-            _engine_holder["engine"] = TextLens()
-
     @app.get("/", tags=["System"])
     def root():
         """Root endpoint returning service status and documentation link."""
+        eng = _engine_holder["engine"]
         return {
             "name": "TextLens OCR REST Service",
             "version": "0.1.0",
             "status": "online",
             "docs": "/docs",
-            "device": _engine_holder["engine"].device if _engine_holder["engine"] else "unknown"
+            "device": eng.device if eng else "unknown",
+            "cuda_accelerated": eng.is_cuda() if eng else is_cuda_available()
         }
 
     @app.get("/api/v1/health", tags=["System"])
@@ -108,6 +103,7 @@ def create_app(engine: Optional[TextLens] = None) -> FastAPI:
             "status": "healthy" if (eng and eng.is_loaded) else "initializing",
             "model_id": eng.model_id if eng else None,
             "device": eng.device if eng else None,
+            "is_cuda": eng.is_cuda() if eng else is_cuda_available()
         }
 
     @app.get("/api/v1/hardware", tags=["System"])
@@ -118,7 +114,7 @@ def create_app(engine: Optional[TextLens] = None) -> FastAPI:
     @app.post("/api/v1/ocr", tags=["OCR Endpoint"])
     async def process_ocr(
         file: Optional[UploadFile] = File(None, description="Image or PDF file upload"),
-        image_url: Optional[str] = Form(None, description="Image URL or local path"),
+        image_url: Optional[str] = Form(None, description="Image URL or local file path"),
         prompt: str = Form("Text Recognition:", description="Instruction prompt"),
         max_new_tokens: int = Form(512, description="Max token generation limit")
     ):
@@ -144,7 +140,7 @@ def create_app(engine: Optional[TextLens] = None) -> FastAPI:
 
                 try:
                     if suffix == ".pdf":
-                        pages = eng.read_pdf(tmp_path, prompt=prompt)
+                        pages = eng.read_pdf(tmp_path, prompt=prompt, max_new_tokens=max_new_tokens)
                         elapsed = round(time.time() - start_time, 3)
                         return {
                             "status": "success",
@@ -170,7 +166,7 @@ def create_app(engine: Optional[TextLens] = None) -> FastAPI:
             elif image_url is not None:
                 # Process URL or path
                 if image_url.lower().endswith(".pdf"):
-                    pages = eng.read_pdf(image_url, prompt=prompt)
+                    pages = eng.read_pdf(image_url, prompt=prompt, max_new_tokens=max_new_tokens)
                     elapsed = round(time.time() - start_time, 3)
                     return {
                         "status": "success",
@@ -208,7 +204,7 @@ def create_app(engine: Optional[TextLens] = None) -> FastAPI:
         start_time = time.time()
         try:
             if payload.image_url.lower().endswith(".pdf"):
-                pages = eng.read_pdf(payload.image_url, prompt=payload.prompt)
+                pages = eng.read_pdf(payload.image_url, prompt=payload.prompt, max_new_tokens=payload.max_new_tokens)
                 elapsed = round(time.time() - start_time, 3)
                 return {
                     "status": "success",
@@ -234,7 +230,7 @@ def create_app(engine: Optional[TextLens] = None) -> FastAPI:
 
 
 def serve(
-    host: str = "0.0.0.0",
+    host: str = "127.0.0.1",
     port: int = 8000,
     reload: bool = False,
     engine: Optional[TextLens] = None
@@ -245,7 +241,7 @@ def serve(
     Parameters
     ----------
     host : str
-        Host IP address (defaults to '0.0.0.0').
+        Host IP address (defaults to '127.0.0.1').
     port : int
         Port number (defaults to 8000).
     reload : bool
@@ -258,17 +254,16 @@ def serve(
     >>> import textlens
     >>> textlens.serve(port=8000)
     """
-    if not UVICORN_AVAILABLE:
-        raise ImportError(
-            "uvicorn is required to run the server. Install via `pip install uvicorn`"
-        )
+    ensure_dependencies(auto_install=True, verbose=False)
+
+    display_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
 
     print("=" * 65)
     print("             STARTING TEXTLENS OCR REST SERVER              ")
     print("=" * 65)
-    print(f" REST API Endpoint : http://{host}:{port}/api/v1/ocr")
-    print(f" Interactive Docs  : http://{host}:{port}/docs")
-    print(f" OpenAPI Spec      : http://{host}:{port}/openapi.json")
+    print(f" REST API Endpoint : http://{display_host}:{port}/api/v1/ocr")
+    print(f" Interactive Docs  : http://{display_host}:{port}/docs")
+    print(f" OpenAPI Spec      : http://{display_host}:{port}/openapi.json")
     print("=" * 65 + "\n")
 
     app = create_app(engine=engine)

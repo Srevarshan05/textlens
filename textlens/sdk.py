@@ -3,12 +3,15 @@ textlens.sdk
 ────────────
 High-level developer SDK for TextLens OCR.
 Supports image, PDF, table, formula, and structured JSON extraction
-using zai-org/GLM-OCR with auto GPU acceleration & dynamic runtime device switching.
+using zai-org/GLM-OCR with real-time progress, CUDA GPU acceleration, and optimized inference.
 """
 
 from __future__ import annotations
 
 import os
+import sys
+import time
+import logging
 import tempfile
 from pathlib import Path
 from typing import Union, List, Dict, Any, Optional
@@ -28,12 +31,16 @@ try:
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
-from textlens.hardware import get_hardware_info, HardwareInfo
+from textlens.hardware import get_hardware_info, is_cuda_available, HardwareInfo
+from textlens.dependencies import check_dependencies, ensure_dependencies
+from textlens.progress import ProgressTracker, print_step
+
+logger = logging.getLogger("textlens.sdk")
 
 
 class TextLens:
     """
-    Main developer client for TextLens OCR.
+    Main developer client for TextLens OCR framework.
 
     Examples
     --------
@@ -42,7 +49,7 @@ class TextLens:
     >>> text = ocr.read("sample.png")
     >>> pages = ocr.read_pdf("document.pdf")
     >>> table = ocr.extract_table("invoice.jpg")
-    >>> ocr.switch_device("cpu")  # Dynamic device switching
+    >>> ocr.serve(port=8000)  # Launch REST API server
     """
 
     def __init__(
@@ -50,7 +57,9 @@ class TextLens:
         model_id: str = "zai-org/GLM-OCR",
         device: Optional[str] = None,
         torch_dtype: Optional[torch.dtype] = None,
-        auto_load: bool = True
+        auto_load: bool = True,
+        auto_fix_dependencies: bool = True,
+        show_progress: bool = True
     ) -> None:
         """
         Initialize TextLens engine instance.
@@ -65,9 +74,17 @@ class TextLens:
             Precision dtype. Defaults to float16 for CUDA, float32 for CPU.
         auto_load : bool
             Whether to load model weights into memory immediately on initialization.
+        auto_fix_dependencies : bool
+            Automatically install missing dependencies if needed.
+        show_progress : bool
+            Whether to display real-time terminal progress indicators.
         """
         self.model_id = model_id
+        self.show_progress = show_progress
         
+        # Check environment dependencies
+        ensure_dependencies(auto_install=auto_fix_dependencies, verbose=show_progress)
+
         # Hardware auto-detection
         hw = get_hardware_info()
         if device is None:
@@ -75,8 +92,22 @@ class TextLens:
         else:
             self.device = device.lower().strip()
 
+        if self.device == "cuda" and is_cuda_available():
+            torch.backends.cudnn.benchmark = True
+
+        if show_progress and self.device == "cpu":
+            print(
+                "[TextLens Notice] Running engine on CPU. "
+                "Note: CPU execution is functional, but processing large documents "
+                "or high-resolution PDFs will be slower compared to CUDA GPU acceleration."
+            )
+
         if torch_dtype is None:
-            self.torch_dtype = torch.float16 if (self.device == "cuda" and hw.gpu_available) else torch.float32
+            if self.device == "cuda" and hw.gpu_available:
+                # Use bfloat16 if supported, else float16
+                self.torch_dtype = torch.bfloat16 if (hasattr(torch.cuda, "is_bf16_supported") and torch.cuda.is_bf16_supported()) else torch.float16
+            else:
+                self.torch_dtype = torch.float32
         else:
             self.torch_dtype = torch_dtype
 
@@ -88,17 +119,21 @@ class TextLens:
             self.load()
 
     def load(self) -> None:
-        """Load HuggingFace processor and model into memory."""
+        """Load HuggingFace processor and model into VRAM/RAM with real-time progress."""
         if not TRANSFORMERS_AVAILABLE:
             raise ImportError(
-                "transformers module is required. Install via `pip install transformers`"
+                "transformers module is required to run GLM-OCR model. "
+                "Install via `pip install transformers accelerate`"
             )
 
-        print(f"[TextLens] Loading model '{self.model_id}' onto device: {self.device.upper()} ...")
+        progress = ProgressTracker(100, desc=f"Loading Model ({self.device.upper()})")
+        progress.update(20, "Initializing Processor...")
 
         self.processor = AutoProcessor.from_pretrained(self.model_id)
 
-        if self.device == "cuda" and torch.cuda.is_available():
+        progress.update(50, "Loading Model Weights into Memory...")
+
+        if self.device == "cuda" and is_cuda_available():
             self.model = GlmOcrForConditionalGeneration.from_pretrained(
                 self.model_id,
                 device_map="auto",
@@ -111,11 +146,12 @@ class TextLens:
                 torch_dtype=torch.float32,
             )
 
+        progress.update(85, "Optimizing Model Evaluation State...")
         self.model.eval()
         self._is_loaded = True
-        
+
         active_dev = next(self.model.parameters()).device
-        print(f"[TextLens] Model successfully loaded on: {active_dev}")
+        progress.complete(f"Loaded on {active_dev}")
 
     @property
     def is_loaded(self) -> bool:
@@ -127,25 +163,20 @@ class TextLens:
         """Retrieve current system hardware details."""
         return get_hardware_info()
 
+    def is_cuda(self) -> bool:
+        """Check if active engine device is CUDA GPU."""
+        return self.device == "cuda" and is_cuda_available()
+
     def switch_device(self, target_device: str) -> str:
         """
         Dynamically switch runtime model execution between 'cuda' (GPU) and 'cpu'.
-
-        Parameters
-        ----------
-        target_device : 'cuda' or 'cpu'
-
-        Returns
-        -------
-        str
-            Status message describing the active execution device.
         """
         if not self._is_loaded or self.model is None:
             raise RuntimeError("Model is not loaded. Call .load() first.")
 
         target = target_device.lower().strip()
         if target in ("gpu", "cuda"):
-            if not torch.cuda.is_available():
+            if not is_cuda_available():
                 raise RuntimeError("CUDA GPU is not available on this system.")
             self.model.to("cuda")
             self.device = "cuda"
@@ -153,7 +184,7 @@ class TextLens:
         else:
             self.model.to("cpu")
             self.device = "cpu"
-            if torch.cuda.is_available():
+            if is_cuda_available():
                 torch.cuda.empty_cache()
             msg = "Device switched to CPU"
 
@@ -164,27 +195,21 @@ class TextLens:
         self,
         image_source: Union[str, Path, Image.Image],
         prompt: str = "Text Recognition:",
-        max_new_tokens: int = 512
+        max_new_tokens: int = 512,
+        temperature: float = 0.7,
+        top_p: float = 0.95
     ) -> str:
         """
-        Read text from an image (local file path, remote HTTP/HTTPS URL, or PIL Image object).
-
-        Parameters
-        ----------
-        image_source : str, Path, or PIL Image
-            Path to image, http/https URL, or PIL Image object.
-        prompt : str
-            Instruction prompt to guide model output style.
-        max_new_tokens : int
-            Maximum generation token length.
-
-        Returns
-        -------
-        str
-            Extracted text content.
+        Read text from an image with real-time progress and CUDA inference acceleration.
         """
         if not self._is_loaded:
             self.load()
+
+        start_time = time.time()
+        progress = ProgressTracker(100, desc="OCR Inference") if self.show_progress else None
+
+        if progress:
+            progress.update(20, "Preparing Image Inputs...")
 
         # Handle input image source types
         if isinstance(image_source, Image.Image):
@@ -208,6 +233,9 @@ class TextLens:
             }
         ]
 
+        if progress:
+            progress.update(50, "Tokenizing Multimodal Input...")
+
         inputs = self.processor.apply_chat_template(
             messages,
             tokenize=True,
@@ -216,38 +244,39 @@ class TextLens:
             return_tensors="pt",
         ).to(self.model.device)
 
-        with torch.no_grad():
-            output_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens)
+        if progress:
+            progress.update(75, f"Running Generation on {self.device.upper()}...")
+
+        # Optimized Inference Mode
+        with torch.inference_mode():
+            output_ids = self.model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                temperature=temperature if temperature > 0 else None,
+                top_p=top_p if temperature > 0 else None,
+                do_sample=temperature > 0,
+            )
 
         input_len = inputs["input_ids"].shape[1]
         generated = output_ids[:, input_len:]
-        return self.processor.decode(generated[0], skip_special_tokens=True).strip()
+        result_text = self.processor.decode(generated[0], skip_special_tokens=True).strip()
+
+        elapsed = round(time.time() - start_time, 3)
+        if progress:
+            progress.complete(f"⚡ Completed in {elapsed}s")
+
+        return result_text
 
     def read_pdf(
         self,
         pdf_source: Union[str, Path],
         prompt: str = "Text Recognition:",
         scale: float = 2.0,
-        max_pages: Optional[int] = None
+        max_pages: Optional[int] = None,
+        max_new_tokens: int = 512
     ) -> List[Dict[str, Any]]:
         """
-        Extract text from a multi-page PDF document page by page.
-
-        Parameters
-        ----------
-        pdf_source : str or Path
-            Path to PDF file.
-        prompt : str
-            Instruction prompt.
-        scale : float
-            Render resolution multiplier (higher scale = sharper OCR).
-        max_pages : int, optional
-            Limit number of pages to process.
-
-        Returns
-        -------
-        List[Dict[str, Any]]
-            List of page objects: [{'page': 1, 'text': '...'}, ...]
+        Extract text from a multi-page PDF document with real-time per-page progress.
         """
         if not PDFIUM_AVAILABLE:
             raise ImportError(
@@ -263,20 +292,33 @@ class TextLens:
         pages_to_process = total_pages if max_pages is None else min(total_pages, max_pages)
 
         results = []
+        start_time = time.time()
+
+        print(f"\n[TextLens PDF] Processing PDF Document ({pages_to_process} pages)...")
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             for idx in range(pages_to_process):
+                page_num = idx + 1
+                progress = ProgressTracker(100, desc=f"PDF Page {page_num}/{pages_to_process}")
+                progress.update(25, "Rendering Page...")
+
                 page = pdf_doc[idx]
                 pil_img = page.render(scale=scale).to_pil().convert("RGB")
-                tmp_path = Path(tmp_dir) / f"page_{idx + 1}.png"
+                tmp_path = Path(tmp_dir) / f"page_{page_num}.png"
                 pil_img.save(tmp_path)
 
-                page_text = self.read(tmp_path, prompt=prompt)
+                progress.update(60, "Extracting Text...")
+                page_text = self.read(tmp_path, prompt=prompt, max_new_tokens=max_new_tokens)
                 results.append({
-                    "page": idx + 1,
+                    "page": page_num,
                     "total_pages": total_pages,
                     "text": page_text
                 })
 
+                progress.complete(f"Page {page_num} Complete")
+
+        total_elapsed = round(time.time() - start_time, 3)
+        print(f"⚡ [TextLens PDF] All {pages_to_process} pages processed in {total_elapsed}s!")
         return results
 
     def extract_table(self, image_source: Union[str, Path, Image.Image]) -> str:
@@ -299,5 +341,15 @@ class TextLens:
         sources: List[Union[str, Path, Image.Image]],
         prompt: str = "Text Recognition:"
     ) -> List[str]:
-        """Process a list of images or URLs sequentially."""
-        return [self.read(src, prompt=prompt) for src in sources]
+        """Process a list of images or URLs sequentially with progress tracking."""
+        total = len(sources)
+        results = []
+        for i, src in enumerate(sources):
+            print(f"\n[TextLens Batch] Item {i + 1}/{total}")
+            results.append(self.read(src, prompt=prompt))
+        return results
+
+    def serve(self, host: str = "0.0.0.0", port: int = 8000, reload: bool = False) -> None:
+        """Launch REST API server using this pre-loaded TextLens instance."""
+        from textlens.server import serve
+        serve(host=host, port=port, reload=reload, engine=self)

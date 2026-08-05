@@ -1,29 +1,26 @@
 """
-TextLens Quickstart Example
-===========================
-Demonstrates simple text recognition from an image using auto-detected GPU/CPU.
+TextLens Example 01: Quickstart & Device Inspection
 """
 
-from textlens import TextLens, print_hardware_status
+import textlens
+from textlens import TextLens
 
 def main():
-    # 1. Inspect hardware status
-    print_hardware_status()
+    # 1. Print system hardware capability (CUDA GPU vs CPU)
+    textlens.print_hardware_status()
 
-    # 2. Initialize TextLens client (auto-detects GPU CUDA or CPU)
+    # 2. Programmatically check CUDA availability
+    if textlens.is_cuda_available():
+        print("✅ NVIDIA CUDA GPU acceleration is ENABLED.")
+    else:
+        print("⚠️  Running on CPU fallback mode.")
+
+    # 3. Initialize SDK client
     ocr = TextLens()
 
-    # 3. Sample HuggingFace test image URL
-    sample_url = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/transformers/tasks/car.jpg"
-
-    print(f"Running OCR on sample URL: {sample_url} ...")
-    result = ocr.read(sample_url, prompt="Text Recognition:")
-
-    print("\n" + "=" * 50)
-    print("OCR RESULT:")
-    print("=" * 50)
-    print(result)
-    print("=" * 50)
+    # 4. Perform simple OCR reading
+    # text = ocr.read("path/to/invoice.png")
+    # print("Extracted Text:", text)
 
 if __name__ == "__main__":
     main()

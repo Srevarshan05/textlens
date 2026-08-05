@@ -1,7 +1,7 @@
 """
 textlens.cli
 ────────────
-Command line interface for TextLens.
+Command-line interface for TextLens OCR Framework.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import sys
 import argparse
 
 from textlens import __version__
-from textlens.hardware import print_hardware_status
+from textlens.hardware import print_hardware_status, detect_system_cuda
 from textlens.sdk import TextLens
 from textlens.server import serve
 
@@ -25,12 +25,13 @@ def main() -> None:
 
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
-    # Command: hardware / info
-    subparsers.add_parser("hardware", help="Display GPU & CPU hardware capabilities and status")
-    subparsers.add_parser("info", help="Display GPU & CPU hardware capabilities and status")
+    # Command: hardware / info / doctor
+    subparsers.add_parser("hardware", help="Display GPU (CUDA) & CPU hardware status")
+    subparsers.add_parser("info", help="Display GPU (CUDA) & CPU hardware status")
+    subparsers.add_parser("doctor", help="Run system CUDA GPU diagnostic and get tailored PyTorch install command")
 
     # Command: read
-    read_parser = subparsers.add_parser("read", help="Run OCR on an image file, PDF, or URL")
+    read_parser = subparsers.add_parser("read", help="Run OCR on an image file, PDF, or remote URL")
     read_parser.add_argument("source", type=str, help="Image file path, PDF path, or remote URL")
     read_parser.add_argument(
         "--prompt", "-p", type=str, default="Text Recognition:", help="Custom prompt instruction"
@@ -40,13 +41,13 @@ def main() -> None:
     )
 
     # Command: serve
-    serve_parser = subparsers.add_parser("serve", help="Launch the OCR REST API server")
-    serve_parser.add_argument("--host", type=str, default="0.0.0.0", help="Host IP binding")
+    serve_parser = subparsers.add_parser("serve", help="Launch the OCR REST API server endpoint")
+    serve_parser.add_argument("--host", type=str, default="127.0.0.1", help="Host IP binding (defaults to 127.0.0.1)")
     serve_parser.add_argument("--port", type=int, default=8000, help="Port number")
 
     args = parser.parse_args()
 
-    if args.command in ("hardware", "info"):
+    if args.command in ("hardware", "info", "doctor"):
         print_hardware_status()
     elif args.command == "read":
         print_hardware_status()
