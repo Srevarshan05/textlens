@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "textlens"
+version = "0.1.0"
+description = "A Python framework that reads text, tables, formulas, and structured data using GLM-OCR — with GPU auto-detection and a REST server mode."
+readme = "README.md"
+authors = [
+    { name = "TextLens Team", email = "dev@textlens.org" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: General",
+]
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.40.0",
+    "accelerate>=0.28.0",
+    "pillow>=9.0.0",
+    "pypdfium2>=4.20.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+    "python-multipart>=0.0.6",
+    "requests>=2.28.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+textlens = "textlens.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/zai-org/GLM-OCR"
+Documentation = "https://github.com/zai-org/GLM-OCR"
