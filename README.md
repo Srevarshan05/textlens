@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Text-Lens.png" alt="TextLens Framework Banner" width="100%"/>
+</p>
+
 # TextLens 🔍
 
 [![PyPI Version](https://img.shields.io/badge/pypi-v0.1.0-blue.svg)](https://pypi.org/project/textlens/)
@@ -140,12 +144,12 @@ Deploy an OCR microservice using a single function call:
 ```python
 import textlens
 
-# Launch REST API server on host 0.0.0.0, port 8000
-textlens.serve(host="0.0.0.0", port=8000)
+# Launch REST API server on host 127.0.0.1, port 8000
+textlens.serve(port=8000)
 ```
 
 Once launched, access interactive OpenAPI / Swagger UI documentation at:
-👉 **`http://localhost:8000/docs`**
+👉 **[http://localhost:8000/docs](http://localhost:8000/docs)**
 
 ---
 
