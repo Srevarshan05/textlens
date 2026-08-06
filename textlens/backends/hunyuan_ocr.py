@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from textlens.models.base import BaseOCRModel
 from textlens.models.cache import ModelCache
@@ -138,82 +138,87 @@ class HunyuanOCRBackend(BaseOCRModel):
         image: Any,
         prompt: Optional[str] = None,
         max_new_tokens: int = 4096,
+        dpi: int = 200,
+        page: Optional[Union[int, List[int]]] = None,
         **kwargs: Any,
     ) -> str:
-        """Run HunyuanOCR inference on a single image.
+        """Run HunyuanOCR inference on a single image or PDF document.
 
         Parameters
         ----------
-        image : PIL.Image | str | Path
-            Image to process.
+        image : Any
+            PIL Image, image file path, PDF file path, URL string, or bytes.
         prompt : str, optional
             Custom instruction prompt. If omitted or empty, uses default
             HunyuanOCR document parsing prompt.
         max_new_tokens : int, optional
             Maximum output tokens. Defaults to ``4096``.
+        dpi : int, optional
+            DPI resolution when rendering PDF pages. Defaults to ``200``.
+        page : int | list[int], optional
+            Page number(s) to process if input is a PDF. Defaults to all pages.
 
         Returns
         -------
         str
-            Extracted text/markdown content.
+            Extracted text/markdown content from the image or PDF.
         """
         if not self._loaded:
             self.load()
 
-        if not _PIL:
-            raise ImportError("Pillow is required. Run: pip install pillow")
+        from textlens.utils.image_utils import load_input_images
 
+        images = load_input_images(image, dpi=dpi, page=page)
         start = time.time()
-
-        if isinstance(image, PILImage.Image):
-            pil_img = image.convert("RGB")
-        elif isinstance(image, (str, Path)):
-            p = Path(str(image))
-            if not p.exists():
-                raise FileNotFoundError(f"Image file not found: {p}")
-            pil_img = PILImage.open(p).convert("RGB")
-        else:
-            raise ValueError(f"Unsupported image type: {type(image)}")
 
         text_prompt = prompt if (prompt and prompt.strip()) else DEFAULT_HUNYUAN_PROMPT
 
-        messages = [{
-            "role": "user",
-            "content": [
-                {"type": "image", "image": pil_img},
-                {"type": "text", "text": text_prompt},
-            ],
-        }]
-
-        inputs = self._processor.apply_chat_template(
-            messages,
-            add_generation_prompt=True,
-            tokenize=True,
-            return_dict=True,
-            return_tensors="pt",
-        ).to(self._device)
-
-        input_len = inputs["input_ids"].shape[1]
-
-        with torch.inference_mode():
-            output_ids = self._model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=False,
-            )
-
-        gen_ids = output_ids[:, input_len:]
-        result = self._processor.batch_decode(gen_ids, skip_special_tokens=True)[0]
-
-        # Post-process: strip bounding box coordinates e.g. (4,22),(996,121)
+        page_results = []
         import re
-        clean_text = re.sub(r'(\(\d{1,4},\s*\d{1,4}\),?\s*)+', ' ', result)
-        clean_text = re.sub(r'[ \t]{2,}', ' ', clean_text)
-        clean_text = re.sub(r'\n{3,}', '\n\n', clean_text)
+
+        for i, pil_img in enumerate(images, start=1):
+            messages = [{
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": pil_img},
+                    {"type": "text", "text": text_prompt},
+                ],
+            }]
+
+            inputs = self._processor.apply_chat_template(
+                messages,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt",
+            ).to(self._device)
+
+            input_len = inputs["input_ids"].shape[1]
+
+            with torch.inference_mode():
+                output_ids = self._model.generate(
+                    **inputs,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=False,
+                )
+
+            gen_ids = output_ids[:, input_len:]
+            result = self._processor.batch_decode(gen_ids, skip_special_tokens=True)[0]
+
+            # Post-process: strip bounding box coordinates e.g. (4,22),(996,121)
+            clean_text = re.sub(r'(\(\d{1,4},\s*\d{1,4}\),?\s*)+', ' ', result)
+            clean_text = re.sub(r'[ \t]{2,}', ' ', clean_text)
+            clean_text = re.sub(r'\n{3,}', '\n\n', clean_text).strip()
+            page_results.append(clean_text)
 
         elapsed = round(time.time() - start, 3)
-        logger.debug("HunyuanOCR inference completed in %.3fs", elapsed)
-        return clean_text.strip()
+        logger.debug("HunyuanOCR inference completed in %.3fs for %d page(s)", elapsed, len(images))
+
+        if len(page_results) == 1:
+            return page_results[0]
+
+        formatted_pages = [f"--- Page {idx} ---\n{text}" for idx, text in enumerate(page_results, start=1)]
+        return "\n\n".join(formatted_pages)
 
     def __repr__(self) -> str:
         status = "loaded" if self._loaded else "unloaded"

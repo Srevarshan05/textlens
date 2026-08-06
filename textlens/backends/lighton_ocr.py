@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from textlens.models.base import BaseOCRModel
 from textlens.models.cache import ModelCache
@@ -133,88 +133,78 @@ class LightOnOCRBackend(BaseOCRModel):
         image: Any,
         prompt: str = "",
         max_new_tokens: int = 1024,
+        dpi: int = 200,
+        page: Optional[Union[int, List[int]]] = None,
         **kwargs: Any,
     ) -> str:
-        """Run LightOnOCR inference on a single image.
+        """Run LightOnOCR inference on an image or PDF document.
 
         Parameters
         ----------
-        image : PIL.Image | str | Path
-            Image to process. Can be a PIL Image, a file path, or a URL string.
+        image : Any
+            PIL Image, image file path, PDF file path, URL string, or bytes.
         prompt : str, optional
             Ignored — LightOnOCR-2 uses a fixed chat template for OCR.
         max_new_tokens : int, optional
             Maximum number of output tokens. Defaults to ``1024``.
+        dpi : int, optional
+            DPI resolution when rendering PDF pages. Defaults to ``200``.
+        page : int | list[int], optional
+            Page number(s) to process if input is a PDF. Defaults to all pages.
 
         Returns
         -------
         str
-            Extracted text content.
+            Extracted text content from the image or PDF.
         """
         if not self._loaded:
             self.load()
 
-        if not _PIL:
-            raise ImportError("Pillow is required. Run: pip install pillow")
+        from textlens.utils.image_utils import load_input_images
 
+        images = load_input_images(image, dpi=dpi, page=page)
         start = time.time()
 
-        # ------------------------------------------------------------------
-        # Build the image source for apply_chat_template
-        # Official pattern uses {"type": "image", "url": <path_or_url>}
-        # We pass the PIL image directly for local files.
-        # ------------------------------------------------------------------
-        if isinstance(image, PILImage.Image):
-            pil_img = image.convert("RGB")
-            image_content: Any = {"type": "image", "image": pil_img}
-        elif isinstance(image, (str, Path)):
-            src = str(image)
-            p = Path(src)
-            if p.exists():
-                pil_img = PILImage.open(p).convert("RGB")
-                image_content = {"type": "image", "image": pil_img}
-            else:
-                # Treat as a URL
-                image_content = {"type": "image", "url": src}
-        else:
-            raise ValueError(f"Unsupported image type: {type(image)}")
-
-        # ------------------------------------------------------------------
-        # Build chat conversation and tokenise
-        # Official pattern from the README
-        # ------------------------------------------------------------------
-        conversation = [{"role": "user", "content": [image_content]}]
-
-        inputs = self._processor.apply_chat_template(
-            conversation,
-            add_generation_prompt=True,
-            tokenize=True,
-            return_dict=True,
-            return_tensors="pt",
-        )
-
-        # Move tensors to device + dtype (official pattern)
         torch_dtype = torch.bfloat16 if self._device == "cuda" else torch.float32
-        inputs = {
-            k: v.to(device=self._device, dtype=torch_dtype) if v.is_floating_point() else v.to(self._device)
-            for k, v in inputs.items()
-        }
 
-        input_len = inputs["input_ids"].shape[1]
+        page_results = []
+        for pil_img in images:
+            # Build conversation per page — official LightOnOCR-2 chat template pattern
+            image_content: Any = {"type": "image", "image": pil_img}
+            conversation = [{"role": "user", "content": [image_content]}]
 
-        # ------------------------------------------------------------------
-        # Generate — official pattern
-        # ------------------------------------------------------------------
-        with torch.inference_mode():
-            output_ids = self._model.generate(**inputs, max_new_tokens=max_new_tokens)
+            inputs = self._processor.apply_chat_template(
+                conversation,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt",
+            )
 
-        # Slice off the prompt tokens — keep only newly generated tokens
-        generated_ids = output_ids[0, input_len:]
-        result = self._processor.decode(generated_ids, skip_special_tokens=True)
+            # Move tensors to device + dtype (official pattern)
+            inputs = {
+                k: v.to(device=self._device, dtype=torch_dtype) if v.is_floating_point() else v.to(self._device)
+                for k, v in inputs.items()
+            }
+
+            input_len = inputs["input_ids"].shape[1]
+
+            with torch.inference_mode():
+                output_ids = self._model.generate(**inputs, max_new_tokens=max_new_tokens)
+
+            # Slice off the prompt tokens — keep only newly generated tokens
+            generated_ids = output_ids[0, input_len:]
+            result = self._processor.decode(generated_ids, skip_special_tokens=True)
+            page_results.append(result.strip())
 
         elapsed = round(time.time() - start, 3)
-        logger.debug("LightOnOCR inference completed in %.3fs", elapsed)
-        return result.strip()
+        logger.debug("LightOnOCR inference completed in %.3fs for %d page(s)", elapsed, len(images))
+
+        if len(page_results) == 1:
+            return page_results[0]
+
+        formatted_pages = [f"--- Page {idx} ---\n{text}" for idx, text in enumerate(page_results, start=1)]
+        return "\n\n".join(formatted_pages)
 
     def __repr__(self) -> str:
         status = "loaded" if self._loaded else "unloaded"

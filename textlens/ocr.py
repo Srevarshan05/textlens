@@ -157,22 +157,35 @@ class OCR:
     # ------------------------------------------------------------------
 
     def read(self, source: Any, prompt: str = "Text Recognition:", **kwargs: Any) -> str:
-        """Extract text from an image, PDF page, or URL.
+        """Extract text from an image or PDF document.
 
         Parameters
         ----------
-        source :
-            A file path (str/Path), URL string, or PIL.Image.Image.
-        prompt : str
-            Instruction prompt forwarded to the model.
+        source : str | Path | PIL.Image.Image | bytes | BytesIO
+            Accepted formats:
+
+            - **Image file** — local path to ``.png``, ``.jpg``, ``.webp``, etc.
+            - **PDF file** — local path to a ``.pdf`` file (multi-page supported).
+            - **URL** — ``http://`` / ``https://`` pointing to an image or PDF.
+            - **PIL.Image** — in-memory Pillow image object.
+            - **bytes / BytesIO** — raw byte buffer of an image or PDF.
+        prompt : str, optional
+            Instruction prompt forwarded to the model. Defaults to
+            ``"Text Recognition:"``.
         **kwargs :
             Additional keyword arguments forwarded to the backend's
-            ``predict()`` method.
+            ``predict()`` method.  Common options:
+
+            - ``dpi`` *(int)* — DPI for PDF rendering (default ``200``).
+            - ``page`` *(int | list[int])* — which PDF page(s) to process
+              (1-indexed, ``None`` = all pages).
+            - ``max_new_tokens`` *(int)* — maximum tokens to generate.
 
         Returns
         -------
         str
-            Extracted text from *source*.
+            Extracted text.  For multi-page PDFs, pages are separated by
+            ``--- Page N ---`` headers.
         """
         self._load_backend()
         return self._backend.predict(source, prompt=prompt, **kwargs)

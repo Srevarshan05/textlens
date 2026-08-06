@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from textlens.models.base import BaseOCRModel
 from textlens.models.cache import ModelCache
@@ -134,53 +134,89 @@ class SmolVLMBackend(BaseOCRModel):
         image: Any,
         prompt: str = "Extract all text from this image:",
         max_new_tokens: int = 512,
+        dpi: int = 200,
+        page: Optional[Union[int, List[int]]] = None,
+        do_sample: bool = False,
+        temperature: float = 0.7,
+        top_p: float = 0.95,
         **kwargs: Any,
     ) -> str:
+        """Run SmolVLM OCR inference on an image or PDF document.
+
+        Parameters
+        ----------
+        image : Any
+            PIL Image, image file path, PDF file path, URL string, or bytes.
+        prompt : str, optional
+            Instruction prompt for SmolVLM. Defaults to ``"Extract all text from this image:"``.
+        max_new_tokens : int, optional
+            Maximum tokens to generate. Defaults to ``512``.
+        dpi : int, optional
+            DPI resolution when rendering PDF pages. Defaults to ``200``.
+        page : int | list[int], optional
+            Page number(s) to process if input is a PDF. Defaults to all pages.
+        do_sample : bool, optional
+            Enable stochastic sampling. Defaults to ``False`` (greedy).
+        temperature : float, optional
+            Sampling temperature.
+        top_p : float, optional
+            Nucleus sampling top_p.
+
+        Returns
+        -------
+        str
+            Extracted text content from the image or PDF.
+        """
         if not self._loaded:
             self.load()
 
-        if not _PIL:
-            raise ImportError("Pillow is required. Run: pip install pillow")
+        from textlens.utils.image_utils import load_input_images
 
+        images = load_input_images(image, dpi=dpi, page=page)
         start = time.time()
 
-        if isinstance(image, PILImage.Image):
-            pil_img = image.convert("RGB")
-        elif isinstance(image, (str, Path)):
-            src = str(image)
-            p = Path(src)
-            if not p.exists():
-                raise FileNotFoundError(f"Image file not found: {p}")
-            pil_img = PILImage.open(p).convert("RGB")
-        else:
-            raise ValueError(f"Unsupported image type: {type(image)}")
+        page_results = []
+        for i, pil_img in enumerate(images, start=1):
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ]
 
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "image"},
-                    {"type": "text", "text": prompt},
-                ],
+            text_prompt = self._processor.apply_chat_template(messages, add_generation_prompt=True)
+            inputs = self._processor(text=text_prompt, images=[pil_img], return_tensors="pt")
+            inputs = inputs.to(self._model.device)
+
+            gen_kwargs: Dict[str, Any] = {
+                "max_new_tokens": max_new_tokens,
+                "do_sample": do_sample,
             }
-        ]
+            if do_sample:
+                gen_kwargs["temperature"] = temperature
+                gen_kwargs["top_p"] = top_p
 
-        text_prompt = self._processor.apply_chat_template(messages, add_generation_prompt=True)
-        inputs = self._processor(text=text_prompt, images=[pil_img], return_tensors="pt")
-        inputs = inputs.to(self._model.device)
+            with torch.inference_mode():
+                generated_ids = self._model.generate(**inputs, **gen_kwargs)
 
-        with torch.inference_mode():
-            generated_ids = self._model.generate(**inputs, max_new_tokens=max_new_tokens)
-
-        # Decode output text omitting the input prompt
-        input_len = inputs["input_ids"].shape[1]
-        generated_texts = self._processor.batch_decode(
-            generated_ids[:, input_len:], skip_special_tokens=True
-        )
+            # Decode output text omitting the input prompt tokens
+            input_len = inputs["input_ids"].shape[1]
+            generated_texts = self._processor.batch_decode(
+                generated_ids[:, input_len:], skip_special_tokens=True
+            )
+            page_results.append(generated_texts[0].strip())
 
         elapsed = round(time.time() - start, 3)
-        logger.debug("SmolVLM inference completed in %.3fs", elapsed)
-        return generated_texts[0].strip()
+        logger.debug("SmolVLM inference completed in %.3fs for %d page(s)", elapsed, len(images))
+
+        if len(page_results) == 1:
+            return page_results[0]
+
+        formatted_pages = [f"--- Page {idx} ---\n{text}" for idx, text in enumerate(page_results, start=1)]
+        return "\n\n".join(formatted_pages)
 
     def __repr__(self) -> str:
         status = "loaded" if self._loaded else "unloaded"
