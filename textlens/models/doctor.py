@@ -125,10 +125,6 @@ def _rule_for_model(
     S = Recommendation.SUPPORTED
     N = Recommendation.NOT_RECOMMENDED
 
-    # PaddleOCR — CPU-native, always excellent
-    if model_id == "paddleocr":
-        return E, ""
-
     # SmolVLM — 256M, works everywhere
     if model_id == "smolvlm":
         if cuda_available and vram_gb >= 2.0:
@@ -136,16 +132,6 @@ def _rule_for_model(
         if cuda_available and vram_gb > 0.0:
             return S, "Very low VRAM — CPU mode recommended."
         return E, "Excellent on CPU — designed for edge devices."
-
-    # Florence-2 — needs 4 GB
-    if model_id == "florence2":
-        if not cuda_available:
-            return S, "Runs on CPU — expect slower speed."
-        if vram_gb >= 4.0:
-            return E, ""
-        if vram_gb >= 2.0:
-            return S, "Below recommended 4 GB VRAM — performance may degrade."
-        return N, "Requires at least 2 GB VRAM or CPU mode."
 
     # GLM OCR — default, needs 6 GB
     if model_id == "glm-ocr":
@@ -157,7 +143,7 @@ def _rule_for_model(
             return S, "Below recommended 6 GB VRAM. Large PDFs may be slower."
         if vram_gb >= 2.0:
             return S, "Low VRAM detected. Use smaller batch sizes."
-        return N, "Insufficient VRAM. Use paddleocr or smolvlm instead."
+        return N, "Insufficient VRAM. Use smolvlm instead."
 
     # LightOnOCR — needs 8 GB
     if model_id == "lighton-ocr":
@@ -322,7 +308,6 @@ class HardwareDoctor:
                             "TextLens will run on CPU.\n"
                             "Large OCR tasks may be significantly slower.\n\n"
                             "Best options for CPU:\n"
-                            "  [OK] PaddleOCR   — Excellent\n"
                             "  [OK] SmolVLM     — Excellent\n"
                             "  [WARN] GLM OCR   — Works, expect slower performance.",
                             style="yellow",
@@ -371,6 +356,6 @@ class HardwareDoctor:
             print(
                 "\nGPU not detected. TextLens will run on CPU.\n"
                 "Large OCR tasks may be significantly slower.\n"
-                "Recommended: PaddleOCR, SmolVLM"
+                "Recommended: SmolVLM"
             )
         print()

@@ -18,14 +18,13 @@ EXPECTED_IDS = {
     "lighton-ocr",
     "hunyuan-ocr",
     "smolvlm",
-    "paddleocr",
 }
 
 
 class TestModelRegistry:
-    def test_all_returns_five_models(self):
+    def test_all_returns_four_models(self):
         models = ModelRegistry.all()
-        assert len(models) == 5
+        assert len(models) == 4
 
     def test_supported_ids_are_correct(self):
         ids = set(ModelRegistry.supported_ids())
@@ -76,10 +75,6 @@ class TestModelRegistry:
         assert meta.hf_repo_id, "hf_repo_id must not be empty"
         assert isinstance(meta.cpu_supported, bool)
         assert isinstance(meta.min_vram_gb, float)
-
-    def test_paddleocr_requires_no_vram(self):
-        meta = ModelRegistry.get("paddleocr")
-        assert meta.min_vram_gb == 0.0
 
     def test_glm_ocr_min_vram(self):
         meta = ModelRegistry.get("glm-ocr")

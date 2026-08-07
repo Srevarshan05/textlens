@@ -36,9 +36,7 @@ class UnknownModelError(TextLensError):
           • glm-ocr        (Default)
           • lighton-ocr
           • hunyuan-ocr
-          • florence2
           • smolvlm
-          • paddleocr
     """
 
     def __init__(self, model_id: str, supported_ids: List[str]) -> None:

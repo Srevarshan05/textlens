@@ -53,15 +53,6 @@ def _make_profile(
 class TestDeterministicRules:
     """Test _rule_for_model against fixed VRAM/CUDA conditions."""
 
-    # ── PaddleOCR — always excellent ───────────────────────────────────
-    def test_paddleocr_always_excellent_cpu(self):
-        rec, _ = _rule_for_model("paddleocr", vram_gb=0.0, cuda_available=False)
-        assert rec == Recommendation.EXCELLENT
-
-    def test_paddleocr_always_excellent_gpu(self):
-        rec, _ = _rule_for_model("paddleocr", vram_gb=8.0, cuda_available=True)
-        assert rec == Recommendation.EXCELLENT
-
     # ── SmolVLM ────────────────────────────────────────────────────────
     def test_smolvlm_excellent_on_cpu(self):
         rec, _ = _rule_for_model("smolvlm", vram_gb=0.0, cuda_available=False)
@@ -127,7 +118,7 @@ class TestEvaluateRecommendations:
     def test_returns_one_recommendation_per_model(self):
         profile = _make_profile(vram_gb=8.0, cuda=True)
         recs = _evaluate_recommendations(profile)
-        assert len(recs) == 5
+        assert len(recs) == 4
 
     def test_all_excellent_with_8gb(self):
         profile = _make_profile(vram_gb=8.0, cuda=True)
@@ -139,11 +130,10 @@ class TestEvaluateRecommendations:
                 f"{rec.model.id} should not be NOT_RECOMMENDED with 8GB VRAM"
             )
 
-    def test_cpu_only_paddleocr_smolvlm_excellent(self):
+    def test_cpu_only_smolvlm_excellent(self):
         profile = _make_profile(vram_gb=0.0, cuda=False)
         recs = _evaluate_recommendations(profile)
         levels = {r.model.id: r.level for r in recs}
-        assert levels["paddleocr"] == Recommendation.EXCELLENT
         assert levels["smolvlm"] == Recommendation.EXCELLENT
         # Hunyuan not recommended on CPU
         assert levels["hunyuan-ocr"] == Recommendation.NOT_RECOMMENDED
@@ -165,7 +155,7 @@ class TestHardwareDoctor:
             report = doctor.run()
             assert isinstance(report, DoctorReport)
             assert report.profile == profile
-            assert len(report.recommendations) == 5
+            assert len(report.recommendations) == 4
 
     def test_print_report_does_not_raise(self, capsys):
         from textlens.models.doctor import DoctorReport

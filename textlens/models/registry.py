@@ -140,31 +140,6 @@ _CATALOG: List[ModelMetadata] = [
         ),
         download_size_gb=0.5,
     ),
-
-    # ── 6. PaddleOCR ───────────────────────────────────────────────────────
-    ModelMetadata(
-        id="paddleocr",
-        display_name="PaddleOCR",
-        category="Traditional OCR",
-        parameters="Small",
-        use_cases=[
-            "CPU",
-            "Server",
-            "Fast OCR",
-            "Fallback Engine",
-        ],
-        min_vram_gb=0.0,
-        min_recommendation="CPU",
-        cpu_supported=True,
-        is_default=False,
-        hf_repo_id="PaddlePaddle/PaddleOCR",
-        description=(
-            "Lightweight traditional OCR engine powered by PaddlePaddle. "
-            "Runs entirely on CPU, making it the ideal fallback engine for "
-            "servers and environments without a GPU."
-        ),
-        download_size_gb=0.3,
-    ),
 ]
 
 def _normalize_key(s: str) -> str:

@@ -106,22 +106,22 @@ class ModelManager:
                 box=box.ROUNDED,
                 show_header=True,
                 header_style="bold cyan",
-                padding=(0, 2),
+                padding=(0, 1),
                 expand=True,
             )
-            table.add_column("Model ID", min_width=14, style="bold yellow")
-            table.add_column("Official HF Repo", min_width=24, style="dim cyan")
-            table.add_column("Params", min_width=8, justify="right")
-            table.add_column("Use Cases", min_width=30)
-            table.add_column("Hardware", min_width=12, style="dim")
-            table.add_column("Installed", min_width=10, justify="center")
+            table.add_column("Model ID", min_width=18, no_wrap=True)
+            table.add_column("Official HF Repo", min_width=22, style="dim cyan", overflow="fold")
+            table.add_column("Params", min_width=6, justify="right", style="bold white")
+            table.add_column("Use Cases", min_width=24)
+            table.add_column("Hardware", min_width=10, style="bold white", no_wrap=True)
 
             tag_colors = ["cyan", "green", "magenta", "yellow", "bright_cyan", "bright_green"]
 
             for meta in catalog:
                 installed = _cache.is_installed(meta.id)
-                installed_text = Text("✓ Yes", style="bold green") if installed else Text("✗ No", style="dim red")
-                default_tag = " [Default]" if meta.is_default else ""
+                status_icon = "[bold green][OK][/bold green]" if installed else "[dim red][X][/dim red]"
+                default_tag = " [dim][Default][/dim]" if meta.is_default else ""
+                model_id_str = f"{status_icon} [bold yellow]{meta.id}[/bold yellow]{default_tag}"
 
                 colored_tags = [
                     f"[{tag_colors[i % len(tag_colors)]}]{tag}[/{tag_colors[i % len(tag_colors)]}]"
@@ -130,12 +130,11 @@ class ModelManager:
                 use_cases_formatted = ", ".join(colored_tags)
 
                 table.add_row(
-                    f"{meta.id}{default_tag}",
+                    model_id_str,
                     meta.hf_repo_id,
                     meta.parameters,
                     use_cases_formatted,
                     meta.min_recommendation,
-                    installed_text,
                 )
 
             console.print()
