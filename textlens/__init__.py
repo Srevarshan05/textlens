@@ -97,8 +97,31 @@ from textlens.models import (
 # ── High-level OCR API ──────────────────────────────────────────────────────
 from textlens.ocr import OCR
 
+# ── Batch Processing API ────────────────────────────────────────────────────
+from textlens.batch import (
+    BatchOCR,
+    BatchStatus,
+    BatchTask,
+    TaskStatus,
+    JobMetrics,
+    BatchJobConfig,
+    BaseBatchQueue,
+    MemoryBatchQueue,
+    StructuredExporter,
+)
+
 
 __all__ = [
+    # ── Batch API ──────────────────────────────────────────────────────
+    "BatchOCR",
+    "BatchStatus",
+    "BatchTask",
+    "TaskStatus",
+    "JobMetrics",
+    "BatchJobConfig",
+    "BaseBatchQueue",
+    "MemoryBatchQueue",
+    "StructuredExporter",
     # ── New API ────────────────────────────────────────────────────────
     "OCR",
     "ModelMetadata",

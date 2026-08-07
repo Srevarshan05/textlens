@@ -23,6 +23,10 @@ textlens doctor
 textlens read <source>
     Run OCR on an image file, PDF, or remote URL.
 
+textlens batch <directory>
+    Process an entire folder of documents with parallel workers and
+    a live local monitoring dashboard.
+
 textlens serve
     Launch the OCR REST API endpoint.
 """
@@ -205,7 +209,26 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Device override (auto-detected if omitted)",
     )
 
-    # ── serve ──────────────────────────────────────────────────────────
+    # ── batch ────────────────────────────────────────────────────
+    batch_p = sub.add_parser(
+        "batch",
+        help="Batch process an entire folder of documents with parallel workers",
+    )
+    batch_p.add_argument("source", metavar="<directory-or-file>", help="Input folder or file path")
+    batch_p.add_argument("--model", "-m", default="glm-ocr", help="Model ID (default: glm-ocr)")
+    batch_p.add_argument("--workers", "-w", type=int, default=4, help="Parallel worker threads (default: 4)")
+    batch_p.add_argument("--format", "-f", default="json",
+                         choices=["json", "markdown", "csv", "txt"],
+                         help="Output format (default: json)")
+    batch_p.add_argument("--output", "-o", default="./batch_output", help="Output directory (default: ./batch_output)")
+    batch_p.add_argument("--retries", type=int, default=2, help="Retry limit per file (default: 2)")
+    batch_p.add_argument("--dpi", type=int, default=200, help="PDF render DPI (default: 200)")
+    batch_p.add_argument("--no-dashboard", action="store_true", help="Disable the live monitoring dashboard")
+    batch_p.add_argument("--port", type=int, default=8765, help="Dashboard port (default: 8765)")
+    batch_p.add_argument("--no-recursive", action="store_true", help="Do not scan subdirectories")
+    batch_p.add_argument("--device", default=None, choices=["cuda", "cpu"], help="Device override")
+
+    # ── serve ────────────────────────────────────────────────────
     serve_p = sub.add_parser("serve", help="Launch the OCR REST API server")
     serve_p.add_argument("--host", default="127.0.0.1", help="Host binding (default: 127.0.0.1)")
     serve_p.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
@@ -215,6 +238,47 @@ def _build_parser() -> argparse.ArgumentParser:
         sub.add_parser(alias, help=argparse.SUPPRESS)
 
     return parser
+
+
+def _cmd_batch(args: argparse.Namespace) -> None:
+    """Handle: textlens batch <source>"""
+    from textlens.batch import BatchOCR
+    try:
+        from rich.console import Console
+        console = Console()
+        console.print(f"\n[bold cyan]TextLens BatchOCR[/bold cyan] — [dim]{args.source}[/dim]")
+        console.print(f"  Model:    [yellow]{args.model}[/yellow]")
+        console.print(f"  Workers:  [yellow]{args.workers}[/yellow]")
+        console.print(f"  Format:   [yellow]{args.format}[/yellow]")
+        console.print(f"  Output:   [yellow]{args.output}[/yellow]")
+        if not args.no_dashboard:
+            console.print(f"  Dashboard: [link=http://127.0.0.1:{args.port}]http://127.0.0.1:{args.port}[/link]\n")
+    except ImportError:
+        print(f"TextLens BatchOCR  source={args.source}  model={args.model}  workers={args.workers}")
+
+    batch = BatchOCR(
+        model=args.model,
+        workers=args.workers,
+        output_format=args.format,
+        output_dir=args.output,
+        retries=args.retries,
+        dpi=args.dpi,
+        device=args.device,
+        enable_dashboard=not args.no_dashboard,
+        dashboard_port=args.port,
+        recursive=not args.no_recursive,
+    )
+    results = batch.run(args.source)
+
+    completed = sum(1 for t in results if t.status.value == "COMPLETED")
+    failed = sum(1 for t in results if t.status.value == "FAILED")
+    try:
+        from rich.console import Console
+        c = Console()
+        c.print(f"\n[bold green]Batch Complete[/bold green]  ✓ {completed} processed  ✕ {failed} failed")
+        c.print(f"Results saved to: [cyan]{args.output}[/cyan]\n")
+    except ImportError:
+        print(f"Batch complete. {completed} processed, {failed} failed. Output: {args.output}")
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +310,9 @@ def main() -> None:
 
     elif args.command == "read":
         _cmd_read(args)
+
+    elif args.command == "batch":
+        _cmd_batch(args)
 
     elif args.command == "serve":
         _cmd_serve(args)
