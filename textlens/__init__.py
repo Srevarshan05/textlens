@@ -49,7 +49,7 @@ Legacy SDK (GLM-OCR only)
 
 from __future__ import annotations
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 __author__ = "TextLens Contributors"
 
 # ── Legacy hardware API (backwards compatible) ──────────────────────────────

@@ -219,6 +219,15 @@ python scripts/run_feature_checks.py --image ./test-image-ocr.png --model glm-oc
 
 See [the API reference](docs/API_REFERENCE.md) for public classes, functions, parameters, return values, and the full test checklist.
 
+## Runnable examples
+
+The [examples](examples/README.md) directory contains separate scripts for environment setup, model management, image/PDF OCR, custom prompts, table/formula/JSON extraction, device switching, BatchOCR, and the REST API. Start with:
+
+```bash
+python examples/00_environment_check.py
+python examples/02_basic_ocr.py ./test-image-ocr.png --model smolvlm --device cuda
+```
+
 ## Status and roadmap
 
 TextLens is an initial local-first release. NVIDIA CUDA is the recommended acceleration path today. CPU mode is a fallback, not the target for high-throughput OCR. Apple Silicon MPS support and strategies for optimising OCR workloads on Apple chips are planned future work; they should not yet be treated as production-ready support.

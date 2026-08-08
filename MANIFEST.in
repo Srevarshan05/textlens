@@ -4,5 +4,6 @@ include pyproject.toml
 include requirements.txt
 recursive-include textlens *.py
 recursive-include docs *.md
+recursive-include examples *.py *.md
 recursive-include tests *.py
 include scripts/run_feature_checks.py
