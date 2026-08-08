@@ -345,7 +345,9 @@ class BatchOCR:
         from textlens.ocr import OCR
         ocr = OCR(
             model=self._config.model_id,
-            device=self._config.device or "auto",
+            # Backends auto-select CUDA/CPU only when the value is None.
+            # Passing the string "auto" falls through to their CPU path.
+            device=self._config.device,
         )
 
         while not self._stop_event.is_set():
