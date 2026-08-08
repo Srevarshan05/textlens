@@ -1,499 +1,228 @@
 <p align="center">
-  <img src="Text-Lens.png" alt="TextLens Framework Banner" width="350"/>
+  <img src="Text-Lens.png" alt="TextLens logo" width="350" />
 </p>
 
-# TextLens 🔍
+# TextLens
 
-[![PyPI Version](https://img.shields.io/badge/pypi-v0.2.0-blue.svg)](https://pypi.org/project/textlens/)
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)](https://python.org)
-[![PyTorch](https://img.shields.io/badge/PyTorch-CUDA%20%7C%20CPU-orange.svg)](https://pytorch.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+**Local OCR for Python developers, built around modern vision-language models (VLMs).**
 
-**TextLens** is a high-performance Python framework for developer-friendly OCR text extraction. Designed for maximum developer flexibility, TextLens features **automatic CUDA driver detection & PyTorch CUDA setup diagnostics**, **multi-model support**, **high-performance batch document processing**, and **1-line REST API endpoint serving** with automatic Swagger UI documentation.
+TextLens makes local OCR reusable: initialise an OCR client, give it an image or PDF, and receive text. It also provides model discovery and caching, CUDA diagnostics, a REST API, and BatchOCR for processing document folders with exports and live progress.
 
----
+> **Early release notice.** TextLens is designed primarily for NVIDIA CUDA GPUs. Most supported engines are VLMs, so an NVIDIA RTX/CUDA-capable GPU is strongly recommended for practical local OCR. CPU fallback exists but is much slower for large documents and batches. Apple Silicon / MPS optimisation is under active investigation and is **not a supported acceleration target yet**.
 
-## Key Features
+## Why TextLens?
 
-- ⚡ **Automated System CUDA Doctor**: Queries system `nvidia-smi`, extracts host GPU CUDA driver version, and provides the exact PyTorch index URL command for any user's PC.
-- 🎯 **Multi-Model OCR Engine**: Switch between `glm-ocr`, `lighton-ocr`, `hunyuan-ocr`, and `smolvlm` with a single parameter.
-- 🚀 **1-Line REST API Server**: Spin up a production-ready microservice with `textlens.serve(port=8000)` featuring full OpenAPI interactive Swagger documentation (`/docs`).
-- 📄 **Multi-Page PDF Processing**: Built-in high-resolution PDF rendering and page-by-page OCR extraction using `pypdfium2`.
-- 🗂️ **BatchOCR — High-Performance Batch Processing**: Process entire folders of PDFs and images in parallel with configurable worker threads, automatic retries, structured exports, and a **live real-time monitoring dashboard** at `http://localhost:8765`.
-- ⚙️ **Dynamic Runtime Device Switching**: Instantly toggle model execution between `cuda` and `cpu` on the fly.
-- 📦 **PyPI Packaging Ready**: Clean standard library structure ready for `pip install textlens`.
+OCR projects repeatedly need the same work: choose a capable model, download it, prepare images and PDFs, select a device, write prompts, manage batch failures, and save usable output. TextLens packages that work behind a Python-first API so the OCR code can stay small, readable, and reusable.
 
----
+## Supported models
 
-## Smart System CUDA GPU Setup Doctor
+The registry currently exposes four locally downloadable VLM/OCR models:
 
-TextLens automatically inspects system hardware so developers and users don't have to manually figure out which PyTorch CUDA wheel matches their graphics driver:
+| ID | Model | Intended use | Recommended GPU memory |
+| --- | --- | --- | --- |
+| `glm-ocr` | GLM OCR (default) | General document OCR, tables, formulas | 6 GB VRAM |
+| `lighton-ocr` | LightOnOCR | Academic and multilingual documents | 8 GB VRAM |
+| `hunyuan-ocr` | HunyuanOCR | Complex layouts, charts, and structured extraction | 8 GB VRAM |
+| `smolvlm` | SmolVLM-256M | Laptops, edge devices, and low-VRAM use | 2 GB VRAM |
 
-```python
-import textlens
+Inspect the live catalog on your machine with `textlens models` or `ModelManager.models()`.
 
-# Check CUDA availability programmatically
-if textlens.is_cuda_available():
-    print("✅ Running with NVIDIA CUDA GPU Acceleration!")
-else:
-    # Introspect system GPU & get exact installation command for this machine
-    sys_cuda = textlens.detect_system_cuda()
-    if sys_cuda.has_nvidia_gpu:
-        print(f"Detected GPU with CUDA Driver {sys_cuda.system_cuda_version}")
-        print("Run this command to enable GPU acceleration:")
-        print(f"  {sys_cuda.recommended_install_command}")
+## Install
 
-# Print detailed hardware diagnostic banner
-textlens.print_hardware_status()
-```
-
-CLI Command:
-```bash
-# Run CUDA GPU Doctor Diagnostic
-textlens doctor
-```
-
-### CPU vs GPU Performance Notice
-
-> [!WARNING]
-> **CPU vs GPU Performance Notice**:
-> While TextLens fully supports CPU execution as a fallback, running GLM-OCR on CPU will be **significantly slower** than NVIDIA CUDA GPU acceleration, especially when processing multi-page PDFs or high-resolution documents. For production workloads and large document batches, **a CUDA-enabled GPU is strongly recommended**.
-
----
-
-## Installation
-
-Install TextLens via `pip`:
-
-```bash
-pip install textlens
-```
-
-Or install from source in editable mode:
+TextLens requires Python 3.9+. Current PyTorch stable releases may require Python 3.10+, so use Python 3.10+ for the smoothest GPU installation.
 
 ```bash
 git clone https://github.com/Srevarshan05/textlens.git
 cd textlens
-pip install -e .
+python -m venv .venv
 ```
 
----
+Activate the environment:
 
-## Quickstart (Python SDK)
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
 
-### 1. Basic Text Extraction
+```bash
+# macOS/Linux
+source .venv/bin/activate
+```
+
+Then install the CUDA-enabled PyTorch build first (next section), followed by TextLens:
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install -e .
+```
+
+## NVIDIA CUDA setup (Windows and Linux)
+
+You need an NVIDIA GPU and a recent NVIDIA graphics driver. For normal TextLens use, you generally **do not need to install the full CUDA Toolkit**: PyTorch's CUDA wheel includes the CUDA runtime it needs. Install the toolkit only if you are compiling CUDA software yourself.
+
+1. Check that Windows/Linux can see your GPU:
+
+   ```bash
+   nvidia-smi
+   ```
+
+   If this command is missing or errors, install or update the driver from [NVIDIA Drivers](https://www.nvidia.com/en-us/drivers/), restart, and run it again.
+
+2. In the activated virtual environment, use the command currently shown by the [official PyTorch installer selector](https://pytorch.org/get-started/locally/) for your OS, Python, Pip, and CUDA platform. For example, the CUDA 12.8 wheel is:
+
+   ```bash
+   python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+   ```
+
+   Choose `cu118`, `cu126`, or `cu128` only when that is what the official selector recommends for your driver/platform. Do not mix a CPU-only PyTorch package with a CUDA wheel in the same environment.
+
+3. Install TextLens:
+
+   ```bash
+   python -m pip install -e .
+   ```
+
+4. Verify both PyTorch and TextLens:
+
+   ```bash
+   python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'not available')"
+   textlens doctor
+   ```
+
+`CUDA: True` means PyTorch can accelerate TextLens. If an NVIDIA GPU is present but this prints `False`, run `textlens doctor`; it reports the detected driver and a suggested PyTorch command. The authoritative PyTorch instructions are linked above because supported CUDA wheel versions change over time.
+
+## Quick start: modern API
+
+The `OCR` API is the recommended registry-based interface. It downloads a registered model the first time it is needed, then lazy-loads it on the first `read()` call.
 
 ```python
-from textlens import TextLens
+from textlens import OCR
 
-# Auto-detects CUDA GPU or CPU
-ocr = TextLens()
-
-# Extract text from local image or URL
+ocr = OCR(model="glm-ocr")       # default model; downloads if missing
 text = ocr.read("invoice.png")
-print("Extracted Text:\n", text)
+print(text)
 ```
 
-### 2. High Customization: Markdown Tables, LaTeX Formulas & JSON
+Use a different model or device:
+
+```python
+ocr = OCR(model="smolvlm", device="cuda")
+text = ocr.read("scan.jpg", prompt="Read every visible word.", max_new_tokens=1024)
+```
+
+`OCR.read()` accepts a local image/PDF path, HTTP(S) URL, Pillow image, `bytes`, or `BytesIO`. PDFs return a single string with `--- Page N ---` separators.
+
+## Legacy SDK: richer GLM-OCR helpers
+
+`TextLens` remains supported for its GLM-OCR-specific helpers. Use `auto_load=False` when you want construction without immediately loading the model.
 
 ```python
 from textlens import TextLens
 
-ocr = TextLens()
+engine = TextLens(auto_load=False)
+engine.load()
 
-# Extract Markdown Table
-table_md = ocr.extract_table("financial_report.png")
-print(table_md)
+print(engine.read("invoice.png"))
+print(engine.extract_table("table.png"))
+print(engine.extract_formula("equation.png"))
+print(engine.extract_json("receipt.jpg", schema='{"vendor": "str", "total": "float"}'))
 
-# Extract LaTeX Math Formulas
-formula_latex = ocr.extract_formula("math_sheet.png")
-print(formula_latex)
-
-# Extract Structured JSON with Schema
-json_output = ocr.extract_json(
-    "receipt.jpg",
-    schema='{"vendor": "str", "amount": "float", "date": "YYYY-MM-DD"}'
-)
-print(json_output)
+for page in engine.read_pdf("contract.pdf", max_pages=3):
+    print(page["page"], page["text"])
 ```
 
-### 3. Multi-Page PDF Processing
+## BatchOCR
 
-```python
-# Process multi-page PDF document
-pdf_pages = ocr.read_pdf("contract.pdf", max_pages=5)
-
-for page in pdf_pages:
-    print(f"--- Page {page['page']} of {page['total_pages']} ---")
-    print(page["text"])
-```
-
-### 4. Dynamic Device Switching
-
-```python
-# Dynamically switch execution device at runtime
-ocr.switch_device("cpu")   # Moves model weights to CPU
-ocr.switch_device("cuda")  # Moves model weights back to CUDA GPU
-```
-
----
-
-## Serving a REST API Endpoint
-
-Deploy an OCR microservice using a single function call:
-
-```python
-import textlens
-
-# Launch REST API server on host 127.0.0.1, port 8000
-textlens.serve(port=8000)
-```
-
-Once launched, access interactive OpenAPI / Swagger UI documentation at:
-👉 **[http://localhost:8000/docs](http://localhost:8000/docs)**
-
----
-
-## REST Endpoint API Usage Guide
-
-### 1. Main OCR Endpoint (`POST /api/v1/ocr`)
-
-#### A. File Upload Request (cURL)
-```bash
-curl -X POST "http://localhost:8000/api/v1/ocr" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@/path/to/document.png" \
-  -F "prompt=Text Recognition:"
-```
-
-#### B. File Upload Request (Python `requests`)
-```python
-import requests
-
-url = "http://localhost:8000/api/v1/ocr"
-with open("invoice.png", "rb") as f:
-    files = {"file": f}
-    data = {"prompt": "Text Recognition:", "max_new_tokens": "512"}
-    response = requests.post(url, files=files, data=data)
-
-print(response.json())
-```
-
-#### C. JavaScript `fetch` Request
-```javascript
-const formData = new FormData();
-formData.append("file", fileInput.files[0]);
-formData.append("prompt", "Text Recognition:");
-
-fetch("http://localhost:8000/api/v1/ocr", {
-  method: "POST",
-  body: formData
-})
-  .then(res => res.json())
-  .then(data => console.log("OCR Result:", data.text));
-```
-
-### 2. JSON Payload Endpoint (`POST /api/v1/ocr/json-payload`)
-
-#### Python `requests`
-```python
-import requests
-
-url = "http://localhost:8000/api/v1/ocr/json-payload"
-payload = {
-    "image_url": "https://example.com/sample_invoice.png",
-    "prompt": "Text Recognition:",
-    "max_new_tokens": 512
-}
-
-response = requests.post(url, json=payload)
-print(response.json())
-```
-
----
-
-## 🗂️ BatchOCR — High-Performance Batch Processing
-
-`BatchOCR` lets you process an **entire folder of documents** (PDFs and images) in parallel with a single API call. TextLens handles queuing, parallel workers, automatic retries, structured output exports, and a **live local monitoring dashboard** — all out of the box.
-
-### Quickstart
-
-```python
-from textlens.batch import BatchOCR
-
-batch = BatchOCR(
-    model="glm-ocr",      # Any supported TextLens model
-    workers=4,            # Parallel worker threads
-    output_format="json", # json | markdown | csv | txt
-    enable_dashboard=True # Opens http://localhost:8765
-)
-
-results = batch.run("./documents/")
-
-for task in results:
-    print(f"{task.source_path.name}: {task.status}")
-```
-
-> [!NOTE]
-> The live monitoring dashboard opens automatically in your browser at **http://localhost:8765** when `enable_dashboard=True` (default). It streams real-time stats without any page refresh.
-
-### Constructor Parameters
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `model` | `str` | `"glm-ocr"` | OCR model ID to use |
-| `workers` | `int` | `4` | Number of parallel worker threads |
-| `output_format` | `str` | `"json"` | Export format: `json`, `markdown`, `csv`, `txt` |
-| `output_dir` | `str` | `"./batch_output"` | Directory to save OCR results |
-| `retries` | `int` | `2` | Retry limit for failed files |
-| `dpi` | `int` | `200` | DPI resolution for rendering PDF pages |
-| `device` | `str` | `None` (auto) | Force `"cuda"` or `"cpu"` |
-| `enable_dashboard` | `bool` | `True` | Launch live monitoring dashboard |
-| `dashboard_port` | `int` | `8765` | Dashboard HTTP port |
-| `recursive` | `bool` | `True` | Scan subdirectories for files |
-| `max_new_tokens` | `int` | `2048` | Max tokens generated per page |
-
-### Processing a Folder
-
-```python
-from textlens.batch import BatchOCR
-
-batch = BatchOCR(model="glm-ocr", workers=4)
-results = batch.run("./invoices/")
-```
-
-**Supported file types**: `.pdf`, `.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.tiff`
-
-### Explicit File List
-
-```python
-results = batch.run([
-    "invoice_jan.pdf",
-    "scan_001.png",
-    "report_q1.pdf",
-])
-```
-
-### Callbacks
-
-```python
-def on_done(task):
-    print(f"✓ {task.source_path.name} — {task.duration_sec:.2f}s")
-
-def on_fail(task):
-    print(f"✗ {task.source_path.name} — {task.error}")
-
-results = batch.run("./docs/", on_file_complete=on_done, on_file_failed=on_fail)
-```
-
-### Output Formats
-
-Each file produces a separate result in the configured format:
-
-| Format | Extension | Contents |
-|---|---|---|
-| `json` | `.json` | Full metadata + extracted text |
-| `markdown` | `.md` | Formatted Markdown with source info |
-| `csv` | `.csv` | Tabular output with one row per file |
-| `txt` | `.txt` | Plain extracted text only |
-
-A consolidated **`batch_manifest.json`** is always saved at the end summarising the entire batch job.
-
-```json
-{
-  "batch_summary": {
-    "total_files": 24,
-    "completed_files": 23,
-    "failed_files": 1,
-    "elapsed_time_sec": 142.5,
-    "average_speed_fps": 0.16,
-    "model_id": "glm-ocr"
-  },
-  "tasks": [...]
-}
-```
-
-### Pause, Resume & Cancel
-
-You can control the batch job interactively from Python or via the dashboard:
-
-```python
-batch = BatchOCR(model="glm-ocr", workers=4)
-
-# In a separate thread / signal handler:
-batch.pause()          # Pauses — in-flight tasks finish, new ones wait
-batch.resume()         # Resumes from paused state
-batch.cancel()         # Signals workers to stop after current task
-batch.retry_failed()   # Re-queues all permanently failed files
-```
-
-### Runtime Reconfiguration
-
-Change worker count, output format, or retry limit **while the job is running** — no restart needed:
-
-```python
-# Scale up workers dynamically
-batch.reconfigure(workers=8)
-
-# Change export format mid-job
-batch.reconfigure(output_format="markdown")
-
-# Update retry limit for future tasks
-batch.reconfigure(retries=3)
-```
-
-### Live Monitoring Dashboard
-
-When `enable_dashboard=True`, a local web server starts automatically and serves a real-time SPA dashboard at **`http://localhost:8765`**.
-
-**Dashboard Features:**
-
-| Feature | Details |
-|---|---|
-| 📊 **KPI Cards** | Total, Processed, Failed, Queued, Active Workers |
-| ⚡ **Speed & ETA** | Files/second throughput and estimated time remaining |
-| 🖥️ **System Resources** | CPU %, RAM used/total GB, GPU VRAM used/total GB |
-| 📋 **Task List** | Per-file status with duration and error preview |
-| 📜 **Live Log Console** | Rolling real-time logs via Server-Sent Events (SSE) |
-| ⏸ **Interactive Controls** | Pause, Resume, Cancel, Retry Failed buttons |
-| ⚙️ **Live Reconfigure** | Adjust workers and output format without restarting |
-
-The dashboard requires **no external dependencies** — it uses Python's built-in `http.server`.
-
-### CLI Usage
-
-```bash
-# Process a folder with 4 workers and open the dashboard
-textlens batch ./documents/
-
-# Use a specific model and output format
-textlens batch ./invoices/ --model lighton-ocr --format markdown
-
-# Scale to 8 workers, save results to custom directory
-textlens batch ./scans/ --workers 8 --output ./results/ --format json
-
-# Process with higher PDF quality (300 DPI)
-textlens batch ./pdfs/ --dpi 300 --retries 3
-
-# Disable the dashboard for headless/server environments
-textlens batch ./documents/ --no-dashboard
-
-# Use a custom dashboard port
-textlens batch ./documents/ --port 9000
-
-# Do not scan subdirectories
-textlens batch ./docs/ --no-recursive
-
-# Full example
-textlens batch ./documents/ \
-  --model glm-ocr \
-  --workers 4 \
-  --format json \
-  --output ./batch_output \
-  --retries 2 \
-  --dpi 200 \
-  --port 8765
-```
-
-### Advanced: Custom Queue Backend
-
-`BatchOCR` ships with an in-memory queue by default. The architecture uses a pluggable `BaseBatchQueue` interface, making it straightforward to integrate Redis or any other backend later without changing your application code:
-
-```python
-from textlens.batch import BatchOCR, BaseBatchQueue
-
-class MyRedisQueue(BaseBatchQueue):
-    # Implement enqueue, dequeue, requeue_failed, etc.
-    ...
-
-batch = BatchOCR(
-    model="glm-ocr",
-    queue_backend=MyRedisQueue(),
-)
-batch.run("./documents/")
-```
-
-### Accessing Results Programmatically
+`BatchOCR` scans a folder (or accepts a list of files), queues supported images/PDFs, retries failures, writes one output per document, and writes a `batch_manifest.json` summary. Supported inputs: PDF, PNG, JPG/JPEG, WEBP, BMP, TIFF/TIF.
 
 ```python
 from textlens.batch import BatchOCR, TaskStatus
 
-batch = BatchOCR(model="glm-ocr", workers=2, enable_dashboard=False)
-results = batch.run("./docs/")
+batch = BatchOCR(
+    model="glm-ocr",
+    workers=2,                  # start small: each worker can consume GPU memory
+    output_dir="./results",
+    output_format="json",      # json | markdown | csv | txt
+    retries=2,
+    enable_dashboard=False,
+)
 
-# Filter results
-completed = [t for t in results if t.status == TaskStatus.COMPLETED]
-failed    = [t for t in results if t.status == TaskStatus.FAILED]
-
-print(f"Processed: {len(completed)} / {len(results)}")
-
-# Access extracted text
-for task in completed:
-    print(f"\n{'='*40}")
-    print(f"File: {task.source_path.name}")
-    print(f"Duration: {task.duration_sec:.2f}s  |  Pages: {task.page_count}")
-    print(f"Output: {task.output_path}")
-    print(task.result_text[:200])
+tasks = batch.run("./documents")
+for task in tasks:
+    if task.status is TaskStatus.COMPLETED:
+        print(task.source_path.name, task.output_path)
+    else:
+        print(task.source_path.name, task.error)
 ```
 
----
+Set `enable_dashboard=True` to launch the local dashboard (default `http://127.0.0.1:8765`). On a GPU, do not increase `workers` blindly: parallel VLM inference can exhaust VRAM. Begin with one or two workers and increase only after checking `textlens doctor` and real memory use.
 
-## Command Line Interface (CLI)
+```python
+# These controls can be called from another thread or your application UI.
+batch.pause()
+batch.resume()
+batch.cancel()
+batch.retry_failed()
+batch.reconfigure(workers=2, output_format="markdown", retries=3)
+```
 
-TextLens includes a built-in CLI command:
+## Model management and hardware inspection
+
+```python
+from textlens import ModelManager
+from textlens.models import HardwareDoctor
+
+ModelManager.models()
+ModelManager.download("smolvlm")
+metadata = ModelManager.info("smolvlm")
+
+report = HardwareDoctor().run()
+HardwareDoctor().print_report(report)
+```
+
+## REST API
+
+```python
+import textlens
+
+textlens.serve(host="127.0.0.1", port=8000)
+```
+
+Open `http://127.0.0.1:8000/docs` for Swagger UI. Available endpoints include `GET /api/v1/health`, `GET /api/v1/hardware`, `POST /api/v1/ocr` (file upload or form path/URL), and `POST /api/v1/ocr/json-payload` (JSON URL/path).
+
+## CLI
 
 ```bash
-# View all supported models
 textlens models
-
-# Install a model
-textlens model install glm-ocr
-
-# Run CUDA GPU Doctor Diagnostic & Introspection
+textlens model install smolvlm
+textlens model info glm-ocr
 textlens doctor
-
-# Run OCR on an image file or PDF
-textlens read document.png --prompt "Text Recognition:"
-textlens read report.pdf
-
-# Batch process an entire folder
-textlens batch ./documents/ --model glm-ocr --workers 4
-
-# Launch REST API endpoint server
+textlens read document.png --device cuda
+textlens batch ./documents --model glm-ocr --workers 2 --format markdown --no-dashboard
 textlens serve --port 8000
 ```
 
----
+## Test before using a model
 
-## Testing & PyPI Publishing Guide
-
-### Running Automated Tests
-Run unit tests using `pytest`:
+The standard suite is offline and mocks downloads/model inference where appropriate:
 
 ```bash
-python -m pytest tests/ -q
+python -m pytest tests -q
+python scripts/run_feature_checks.py
 ```
 
-### Building & Pushing to PyPI
+For a real, local inference check after downloading a model, supply an image:
 
-1. Install build tools:
-   ```bash
-   pip install build twine
-   ```
+```bash
+python scripts/run_feature_checks.py --image ./test-image-ocr.png --model glm-ocr --device cuda
+```
 
-2. Build source distribution and wheel:
-   ```bash
-   python -m build
-   ```
+See [the API reference](docs/API_REFERENCE.md) for public classes, functions, parameters, return values, and the full test checklist.
 
-3. Upload package to PyPI:
-   ```bash
-   twine upload dist/*
-   ```
+## Status and roadmap
 
----
+TextLens is an initial local-first release. NVIDIA CUDA is the recommended acceleration path today. CPU mode is a fallback, not the target for high-throughput OCR. Apple Silicon MPS support and strategies for optimising OCR workloads on Apple chips are planned future work; they should not yet be treated as production-ready support.
 
 ## License
 
-MIT License © TextLens Contributors
+MIT License © TextLens Contributors.

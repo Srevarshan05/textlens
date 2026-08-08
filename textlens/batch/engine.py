@@ -297,12 +297,16 @@ class BatchOCR:
             self._config.workers = workers
             with self._metrics_lock:
                 self._metrics.target_workers = workers
-            # Spawn new workers if increasing
-            current = sum(1 for t in self._worker_threads if t.is_alive())
-            for i in range(max(0, workers - current)):
-                t = threading.Thread(target=self._worker_loop, daemon=True)
-                t.start()
-                self._worker_threads.append(t)
+                is_running = self._metrics.status == BatchStatus.RUNNING
+            # Spawn additional workers only for an active job. Starting
+            # workers while idle eagerly creates/downloads an OCR model and
+            # leaves threads polling an empty queue.
+            if is_running:
+                current = sum(1 for t in self._worker_threads if t.is_alive())
+                for _ in range(max(0, workers - current)):
+                    t = threading.Thread(target=self._worker_loop, daemon=True)
+                    t.start()
+                    self._worker_threads.append(t)
             self._log("Worker count reconfigured to %d.", workers)
 
         if output_format is not None:

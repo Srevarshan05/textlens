@@ -1,27 +1,28 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "textlens"
-version = "0.2.0"
-description = "A modular, production-ready multi-model OCR framework with a central model registry, hardware doctor, and 1-line REST API serving."
+version = "0.2.1"
+description = "Local, VLM-powered OCR for Python: images, PDFs, batch processing, CUDA diagnostics, and a REST API."
 readme = "README.md"
 authors = [
     { name = "TextLens Team", email = "dev@textlens.org" }
 ]
-license = { text = "MIT" }
-requires-python = ">=3.8"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
 keywords = ["ocr", "glm-ocr", "deep-learning", "pytorch", "document-ai", "pdf-ocr", "fastapi", "rest-api"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Text Processing :: General",
 ]
@@ -49,5 +50,10 @@ gpu-utils = ["GPUtil>=1.4.0"]
 textlens = "textlens.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/zai-org/GLM-OCR"
-Documentation = "https://github.com/zai-org/GLM-OCR"
+Homepage = "https://github.com/Srevarshan05/textlens"
+Documentation = "https://github.com/Srevarshan05/textlens/blob/main/docs/API_REFERENCE.md"
+Source = "https://github.com/Srevarshan05/textlens"
+Issues = "https://github.com/Srevarshan05/textlens/issues"
+
+[tool.setuptools.packages.find]
+include = ["textlens*"]

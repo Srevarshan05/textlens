@@ -37,3 +37,4 @@ Thumbs.db
 # Test artifacts
 sample_test_doc.png
 .pytest_cache/
+.test-tmp/
