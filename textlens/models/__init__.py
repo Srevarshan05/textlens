@@ -1,76 +1,47 @@
-"""
-textlens.models
-───────────────
-Public API surface for the TextLens model management subsystem.
+"""Lazy public API for TextLens model management.
 
-Exports
--------
-ModelMetadata
-    Immutable descriptor for a registered TextLens model.
-
-ModelRegistry
-    Central read-only registry of all officially supported models.
-
-ModelManager
-    Developer-facing class for listing, downloading, and removing models.
-
-ModelCache
-    Local disk cache manager (advanced use).
-
-ModelDownloader
-    HuggingFace downloader (advanced use).
-
-HardwareDoctor
-    Deterministic hardware inspector and model recommender.
-
-HardwareProfile
-    Immutable snapshot of system hardware capabilities.
-
-Exceptions
-----------
-TextLensError, UnknownModelError, ModelNotInstalledError,
-DownloadError, HardwareInspectionError
+Keeping this package lightweight is important because ``textlens models``
+only needs catalog metadata and should not import download or GPU tooling.
 """
 
 from __future__ import annotations
 
-from textlens.models.metadata import ModelMetadata
-from textlens.models.registry import ModelRegistry
-from textlens.models.cache import ModelCache
-from textlens.models.downloader import ModelDownloader
-from textlens.models.manager import ModelManager
-from textlens.models.hardware import HardwareProfile, inspect_hardware
-from textlens.models.doctor import HardwareDoctor, DoctorReport, ModelRecommendation, Recommendation
-from textlens.models.base import BaseOCRModel
-from textlens.models.exceptions import (
-    TextLensError,
-    UnknownModelError,
-    ModelNotInstalledError,
-    DownloadError,
-    HardwareInspectionError,
-)
+from importlib import import_module
+from typing import Any, Dict, Tuple
 
-__all__ = [
-    # Metadata & Registry
-    "ModelMetadata",
-    "ModelRegistry",
-    # Management
-    "ModelCache",
-    "ModelDownloader",
-    "ModelManager",
-    # Hardware & Doctor
-    "HardwareProfile",
-    "inspect_hardware",
-    "HardwareDoctor",
-    "DoctorReport",
-    "ModelRecommendation",
-    "Recommendation",
-    # Base interface
-    "BaseOCRModel",
-    # Exceptions
-    "TextLensError",
-    "UnknownModelError",
-    "ModelNotInstalledError",
-    "DownloadError",
-    "HardwareInspectionError",
-]
+_LAZY_EXPORTS: Dict[str, Tuple[str, str]] = {
+    "ModelMetadata": ("textlens.models.metadata", "ModelMetadata"),
+    "ModelRegistry": ("textlens.models.registry", "ModelRegistry"),
+    "ModelCache": ("textlens.models.cache", "ModelCache"),
+    "ModelDownloader": ("textlens.models.downloader", "ModelDownloader"),
+    "ModelManager": ("textlens.models.manager", "ModelManager"),
+    "HardwareProfile": ("textlens.models.hardware", "HardwareProfile"),
+    "inspect_hardware": ("textlens.models.hardware", "inspect_hardware"),
+    "HardwareDoctor": ("textlens.models.doctor", "HardwareDoctor"),
+    "DoctorReport": ("textlens.models.doctor", "DoctorReport"),
+    "ModelRecommendation": ("textlens.models.doctor", "ModelRecommendation"),
+    "Recommendation": ("textlens.models.doctor", "Recommendation"),
+    "BaseOCRModel": ("textlens.models.base", "BaseOCRModel"),
+    "TextLensError": ("textlens.models.exceptions", "TextLensError"),
+    "UnknownModelError": ("textlens.models.exceptions", "UnknownModelError"),
+    "ModelNotInstalledError": ("textlens.models.exceptions", "ModelNotInstalledError"),
+    "DownloadError": ("textlens.models.exceptions", "DownloadError"),
+    "HardwareInspectionError": ("textlens.models.exceptions", "HardwareInspectionError"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    try:
+        module_name, attribute = _LAZY_EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))
+
+
+__all__ = list(_LAZY_EXPORTS)

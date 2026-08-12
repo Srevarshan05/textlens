@@ -4,7 +4,7 @@ Each script demonstrates one feature and is intended to be run from the reposito
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e .
+python -m pip install -e ".[inference,server,ui]"
 ```
 
 | Script | Purpose | Downloads/loads a model? |

@@ -55,7 +55,7 @@ def _print_error(msg: str) -> None:
 
 def _cmd_models(_args: argparse.Namespace) -> None:
     """Handle: textlens models"""
-    from textlens.models import ModelManager
+    from textlens.models.manager import ModelManager
     ModelManager.models()
 
 

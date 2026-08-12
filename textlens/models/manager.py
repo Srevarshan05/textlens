@@ -29,7 +29,6 @@ import logging
 from typing import List, Optional
 
 from textlens.models.cache import ModelCache
-from textlens.models.downloader import ModelDownloader
 from textlens.models.exceptions import UnknownModelError
 from textlens.models.metadata import ModelMetadata
 from textlens.models.registry import ModelRegistry
@@ -42,7 +41,28 @@ logger = logging.getLogger("textlens.models.manager")
 # ---------------------------------------------------------------------------
 
 _cache = ModelCache()
-_downloader = ModelDownloader(cache=_cache)
+
+
+class _LazyDownloader:
+    """Defer the Hugging Face import until download/remove is requested."""
+
+    def __init__(self) -> None:
+        self._instance = None
+
+    def _get(self):
+        if self._instance is None:
+            from textlens.models.downloader import ModelDownloader
+            self._instance = ModelDownloader(cache=_cache)
+        return self._instance
+
+    def download(self, model_id: str) -> None:
+        return self._get().download(model_id)
+
+    def remove(self, model_id: str) -> bool:
+        return self._get().remove(model_id)
+
+
+_downloader = _LazyDownloader()
 
 
 def _get_console():  # type: ignore[return]

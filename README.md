@@ -49,12 +49,44 @@ Activate the environment:
 source .venv/bin/activate
 ```
 
-Then install the CUDA-enabled PyTorch build first (next section), followed by TextLens:
+Install the lightweight catalog/utilities package first. This is enough for
+fast commands such as `textlens models` and for inspecting the local catalog:
 
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -e .
 ```
+
+### Choose the features you need
+
+TextLens keeps its large, optional stacks out of the default installation. This
+makes `pip install textlens-srevarshan` and catalog-only CLI commands fast.
+
+| Need | Install command |
+| --- | --- |
+| Browse the model catalog and basic utilities | `python -m pip install textlens-srevarshan` |
+| Run local VLM OCR and BatchOCR | `python -m pip install "textlens-srevarshan[inference,ui]"` |
+| Run the local REST API | `python -m pip install "textlens-srevarshan[inference,server]"` |
+| Install every optional feature | `python -m pip install "textlens-srevarshan[all]"` |
+
+For NVIDIA GPU OCR, install the appropriate PyTorch CUDA wheel first, as shown
+in the next section. Then install the `inference` extra. The following commands
+are useful after a CUDA-enabled PyTorch installation:
+
+```bash
+python -m pip install "textlens-srevarshan[inference,ui]"
+python -m pip install "textlens-srevarshan[inference,server]"
+# Full developer installation, including the optional terminal UI/diagnostics:
+python -m pip install "textlens-srevarshan[all]"
+```
+
+### Fast CLI behaviour
+
+`textlens models`, `textlens --help`, and model-catalog imports load only
+TextLens metadata. They do **not** import PyTorch, Transformers, FastAPI, or
+download models. This keeps catalog commands responsive even on a fresh
+installation. OCR dependencies and model weights load only when you request an
+OCR, download, server, or batch-inference feature.
 
 ## NVIDIA CUDA setup (Windows and Linux)
 
@@ -94,6 +126,12 @@ You need an NVIDIA GPU and a recent NVIDIA graphics driver. For normal TextLens 
 ## Quick start: modern API
 
 The `OCR` API is the recommended registry-based interface. It downloads a registered model the first time it is needed, then lazy-loads it on the first `read()` call.
+
+Install its inference dependencies first:
+
+```bash
+python -m pip install "textlens-srevarshan[inference]"
+```
 
 ```python
 from textlens import OCR
@@ -181,6 +219,12 @@ HardwareDoctor().print_report(report)
 ```
 
 ## REST API
+
+Install the server extra before starting the API:
+
+```bash
+python -m pip install "textlens-srevarshan[server,inference]"
+```
 
 ```python
 import textlens
