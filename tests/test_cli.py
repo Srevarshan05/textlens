@@ -35,10 +35,17 @@ class TestCLIModels:
 class TestCLIDiscover:
     def test_discover_command_routes_to_handler(self):
         with patch("textlens.cli._cmd_discover") as mock:
-            with patch.object(sys, "argv", ["textlens", "discover", "--use-case", "invoices"]):
+            with patch.object(sys, "argv", ["textlens", "discover", "invoices"]):
                 from textlens.cli import main
                 main()
-            assert mock.call_args.args[0].use_case == "invoices"
+            assert mock.call_args.args[0].topic == "invoices"
+
+    def test_discover_compatible_alias_is_supported(self):
+        with patch("textlens.cli._cmd_discover") as mock:
+            with patch.object(sys, "argv", ["textlens", "discover", "invoices", "--compatible"]):
+                from textlens.cli import main
+                main()
+            assert mock.call_args.args[0].compatible_only is True
 
 
 class TestCLIModelInstall:

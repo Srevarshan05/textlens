@@ -68,11 +68,16 @@ def _cmd_discover(args: argparse.Namespace) -> None:
     from textlens.models.discovery import discover_models, print_discovered_models
     from textlens.models.hardware import inspect_hardware
 
+    if args.topic and args.use_case:
+        _print_error("Use either a topic (for example: 'discover invoices') or --use-case, not both.")
+        sys.exit(2)
+
+    use_case = args.use_case or args.topic
     profile = inspect_hardware()
     try:
         models = discover_models(
             search=args.search,
-            use_case=args.use_case,
+            use_case=use_case,
             limit=args.limit,
             compatible_only=args.compatible_only,
             profile=profile,
@@ -179,7 +184,8 @@ def _build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Examples:\n"
             "  textlens models\n"
-            "  textlens discover --use-case invoices --compatible-only\n"
+            "  textlens discover invoices --compatible\n"
+            "  textlens discover handwriting --limit 10\n"
             "  textlens model install glm-ocr\n"
             "  textlens model info smolvlm\n"
             "  textlens model remove smolvlm\n"
@@ -206,11 +212,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "discover",
         help="Search live Hugging Face OCR/VLM candidates for this hardware",
     )
+    discover_p.add_argument(
+        "topic",
+        nargs="?",
+        help="Optional use case, e.g. invoices, tables, or handwriting",
+    )
     discover_p.add_argument("--search", default="ocr", help="Hugging Face search phrase (default: ocr)")
     discover_p.add_argument("--use-case", help="Refine candidates, e.g. invoices, tables, handwriting")
     discover_p.add_argument("--limit", type=int, default=12, help="Candidates to show (1-50; default: 12)")
     discover_p.add_argument(
-        "--compatible-only",
+        "--compatible", "--compatible-only",
+        dest="compatible_only",
         action="store_true",
         help="Only show models whose estimated VRAM fits detected CUDA hardware",
     )

@@ -97,9 +97,13 @@ Face Hub, install the small `catalog` extra and run:
 
 ```bash
 python -m pip install "textlens-srevarshan[catalog]"
-textlens discover --use-case invoices --compatible-only
-textlens discover --search "handwriting ocr" --limit 10
+textlens discover
+textlens discover invoices --compatible
+textlens discover handwriting --limit 10
 ```
+
+`textlens discover <topic>` is the simple form. `--search` and `--use-case`
+remain available for advanced searches and scripts.
 
 `discover` ranks Hub results by downloads and displays parameter count (when
 published), a VRAM guide, and detected GPU fit. Official TextLens models retain
