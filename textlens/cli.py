@@ -8,6 +8,10 @@ Subcommands
 textlens models
     List all officially supported TextLens models.
 
+textlens discover
+    Search live OCR/VLM candidates from Hugging Face and rank them against
+    local hardware.
+
 textlens model install <id>
     Download and cache a model from HuggingFace.
 
@@ -57,6 +61,34 @@ def _cmd_models(_args: argparse.Namespace) -> None:
     """Handle: textlens models"""
     from textlens.models.manager import ModelManager
     ModelManager.models()
+
+
+def _cmd_discover(args: argparse.Namespace) -> None:
+    """Handle: textlens discover [options]."""
+    from textlens.models.discovery import discover_models, print_discovered_models
+    from textlens.models.hardware import inspect_hardware
+
+    profile = inspect_hardware()
+    try:
+        models = discover_models(
+            search=args.search,
+            use_case=args.use_case,
+            limit=args.limit,
+            compatible_only=args.compatible_only,
+            profile=profile,
+        )
+    except (ImportError, RuntimeError) as exc:
+        _print_error(str(exc))
+        sys.exit(1)
+
+    if not models:
+        print("No matching Hugging Face candidates found.")
+        return
+    print_discovered_models(models, profile)
+    print(
+        "\nNote: Live candidates are research suggestions, not automatically "
+        "supported TextLens backends. Check each model card/license before use."
+    )
 
 
 def _cmd_model_install(args: argparse.Namespace) -> None:
@@ -147,6 +179,7 @@ def _build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Examples:\n"
             "  textlens models\n"
+            "  textlens discover --use-case invoices --compatible-only\n"
             "  textlens model install glm-ocr\n"
             "  textlens model info smolvlm\n"
             "  textlens model remove smolvlm\n"
@@ -167,6 +200,19 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser(
         "models",
         help="List all officially supported TextLens models",
+    )
+
+    discover_p = sub.add_parser(
+        "discover",
+        help="Search live Hugging Face OCR/VLM candidates for this hardware",
+    )
+    discover_p.add_argument("--search", default="ocr", help="Hugging Face search phrase (default: ocr)")
+    discover_p.add_argument("--use-case", help="Refine candidates, e.g. invoices, tables, handwriting")
+    discover_p.add_argument("--limit", type=int, default=12, help="Candidates to show (1-50; default: 12)")
+    discover_p.add_argument(
+        "--compatible-only",
+        action="store_true",
+        help="Only show models whose estimated VRAM fits detected CUDA hardware",
     )
 
     # ── model (sub-sub-commands) ────────────────────────────────────────
@@ -293,6 +339,9 @@ def main() -> None:
 
     if args.command == "models":
         _cmd_models(args)
+
+    elif args.command == "discover":
+        _cmd_discover(args)
 
     elif args.command == "model":
         if not args.model_action:

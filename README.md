@@ -65,6 +65,7 @@ makes `pip install textlens-srevarshan` and catalog-only CLI commands fast.
 | Need | Install command |
 | --- | --- |
 | Browse the model catalog and basic utilities | `python -m pip install textlens-srevarshan` |
+| Search live Hugging Face OCR/VLM candidates | `python -m pip install "textlens-srevarshan[catalog]"` |
 | Run local VLM OCR and BatchOCR | `python -m pip install "textlens-srevarshan[inference,ui]"` |
 | Run the local REST API | `python -m pip install "textlens-srevarshan[inference,server]"` |
 | Install every optional feature | `python -m pip install "textlens-srevarshan[all]"` |
@@ -87,6 +88,25 @@ TextLens metadata. They do **not** import PyTorch, Transformers, FastAPI, or
 download models. This keeps catalog commands responsive even on a fresh
 installation. OCR dependencies and model weights load only when you request an
 OCR, download, server, or batch-inference feature.
+
+### Live model discovery for your hardware
+
+The built-in catalog (`textlens models`) contains only TextLens-supported
+backends. To research additional OCR/VLM repositories from the live Hugging
+Face Hub, install the small `catalog` extra and run:
+
+```bash
+python -m pip install "textlens-srevarshan[catalog]"
+textlens discover --use-case invoices --compatible-only
+textlens discover --search "handwriting ocr" --limit 10
+```
+
+`discover` ranks Hub results by downloads and displays parameter count (when
+published), a VRAM guide, and detected GPU fit. Official TextLens models retain
+their catalog minimum VRAM; other Hub repositories use a conservative fp16
+estimate from reported parameters. These are discovery recommendations, not a
+guarantee that a model will run or a statement that TextLens already has an
+inference backend for it.
 
 ## NVIDIA CUDA setup (Windows and Linux)
 

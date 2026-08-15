@@ -59,6 +59,10 @@ Constructor parameters: `model="glm-ocr"`, `workers=4`, `output_format="json"`, 
 
 `BatchJobConfig` is the configuration dataclass used internally by `BatchOCR`. Its fields mirror the constructor settings and additionally expose `input_source` and an optional `prompt`. Treat it as configuration data rather than a job controller.
 
+### Batch execution lifecycle
+
+`BatchOCR.run(source)` first discovers supported files (PDF, PNG, JPG/JPEG, WEBP, BMP, TIFF/TIF), then queues a `BatchTask` for every input. Worker threads each create an OCR engine, process and export each task, retry failed tasks up to `retries`, and finally write `batch_manifest.json` in `output_dir`. `workers=1` is the safest starting point on a single GPU; raise it only after confirming the selected model fits comfortably in VRAM. The controller methods `pause()`, `resume()`, `cancel()`, `retry_failed()`, `metrics()`, and `logs()` are safe to use while a job is running.
+
 ### Batch extension points
 
 `BaseBatchQueue` defines `enqueue`, `dequeue`, `task_done`, `requeue_failed`, `get_task`, `get_all_tasks`, `size`, and `clear`. `MemoryBatchQueue` is the provided thread-safe in-memory implementation. Implement every method to use a custom queue backend.
@@ -83,6 +87,7 @@ Constructor parameters: `model="glm-ocr"`, `workers=4`, `output_format="json"`, 
 | `ModelManager.download(model_id)` / `remove(model_id)` | Downloads/removes a registered model. |
 | `ModelManager.info(model_id) -> ModelMetadata` | Prints and returns detailed metadata/cache status. |
 | `ModelManager.is_installed(model_id) -> bool` | Validates and checks the cache. |
+| `discover_models(search="ocr", use_case=None, limit=12, compatible_only=False, profile=None) -> list[DiscoveredModel]` | Queries live Hugging Face OCR/VLM candidates and adds parameter/VRAM guidance using a detected or supplied `HardwareProfile`. Official catalog entries retain their registered minimum VRAM; third-party figures are estimates. Install `textlens-srevarshan[catalog]`. These are suggestions, not supported TextLens backends. |
 | `ModelCache.model_path(model_id)` | Local cache path (`~/.cache/textlens/models/<model-id>` by default). |
 | `ModelCache.is_installed`, `disk_usage_gb`, `ensure_directory`, `list_installed`, `remove` | Cache inspection and management utilities. |
 | `ModelDownloader.download(model_id, force=False) -> Path` | Lower-level Hugging Face download. |

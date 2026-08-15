@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "textlens-srevarshan"
-version = "0.2.5"
+version = "0.2.6"
 description = "Local, VLM-powered OCR for Python: images, PDFs, batch processing, CUDA diagnostics, and a REST API."
 readme = "README.md"
 authors = [
@@ -33,6 +33,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+catalog = ["huggingface_hub>=0.21.0"]
 inference = [
     "torch>=2.0.0",
     "transformers>=4.40.0",

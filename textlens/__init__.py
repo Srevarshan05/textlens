@@ -12,7 +12,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any, Dict, Tuple
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 __author__ = "TextLens Contributors"
 
 # (module, attribute) pairs are imported only when the public name is used.
@@ -43,6 +43,8 @@ _LAZY_EXPORTS: Dict[str, Tuple[str, str]] = {
     "HardwareDoctor": ("textlens.models.doctor", "HardwareDoctor"),
     "HardwareProfile": ("textlens.models.hardware", "HardwareProfile"),
     "inspect_hardware": ("textlens.models.hardware", "inspect_hardware"),
+    "DiscoveredModel": ("textlens.models.discovery", "DiscoveredModel"),
+    "discover_models": ("textlens.models.discovery", "discover_models"),
     "BaseOCRModel": ("textlens.models.base", "BaseOCRModel"),
     "TextLensError": ("textlens.models.exceptions", "TextLensError"),
     "UnknownModelError": ("textlens.models.exceptions", "UnknownModelError"),

@@ -32,6 +32,15 @@ class TestCLIModels:
             mock.assert_called_once()
 
 
+class TestCLIDiscover:
+    def test_discover_command_routes_to_handler(self):
+        with patch("textlens.cli._cmd_discover") as mock:
+            with patch.object(sys, "argv", ["textlens", "discover", "--use-case", "invoices"]):
+                from textlens.cli import main
+                main()
+            assert mock.call_args.args[0].use_case == "invoices"
+
+
 class TestCLIModelInstall:
     def test_model_install_calls_download(self):
         with patch("textlens.models.manager.ModelManager.download") as mock_dl:

@@ -17,6 +17,8 @@ _LAZY_EXPORTS: Dict[str, Tuple[str, str]] = {
     "ModelManager": ("textlens.models.manager", "ModelManager"),
     "HardwareProfile": ("textlens.models.hardware", "HardwareProfile"),
     "inspect_hardware": ("textlens.models.hardware", "inspect_hardware"),
+    "DiscoveredModel": ("textlens.models.discovery", "DiscoveredModel"),
+    "discover_models": ("textlens.models.discovery", "discover_models"),
     "HardwareDoctor": ("textlens.models.doctor", "HardwareDoctor"),
     "DoctorReport": ("textlens.models.doctor", "DoctorReport"),
     "ModelRecommendation": ("textlens.models.doctor", "ModelRecommendation"),

@@ -20,6 +20,7 @@ python -m pip install -e ".[inference,server,ui]"
 | `08_batch_callbacks.py FOLDER` | Batch callbacks and result filtering | Yes |
 | `09_rest_server.py` | Start the local REST API | Yes |
 | `10_rest_client.py IMAGE` | Submit a file to a running REST API | No (server does OCR) |
+| `11_live_model_discovery.py` | Search live Hugging Face OCR/VLM candidates for detected hardware | No (`catalog` extra only) |
 
 Start with `00_environment_check.py`. For a CUDA-enabled machine, `CUDA available: True` must appear before expecting GPU acceleration. The first model-based run can download several GB of model weights; subsequent runs use the local cache.
 
