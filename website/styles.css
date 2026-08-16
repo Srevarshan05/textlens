@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   TextLens — styles.css (Ultra Fluid, Advanced Mobile Responsive)
+   TextLens — styles.css (Advanced Scroll Animations & Glowing Dividers)
    ═══════════════════════════════════════════════════════════════════ */
 
 /* ── Tokens ─────────────────────────────────────────────────────── */
@@ -43,6 +43,27 @@ body {
   margin: 0 auto;
 }
 .narrow { max-width: 780px; margin: 0 auto; }
+
+/* ── MILD GLOWING GREEN GRADIENT SECTION INTERSECTION DIVIDERS ───── */
+.glow-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(112, 223, 127, 0.55) 50%, transparent 100%);
+  position: relative;
+  z-index: 10;
+  margin: 0;
+}
+.glow-divider::after {
+  content: "";
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(600px, 85vw);
+  height: 48px;
+  background: radial-gradient(ellipse at center, rgba(112, 223, 127, 0.28) 0%, rgba(112, 223, 127, 0.08) 50%, transparent 80%);
+  pointer-events: none;
+}
 
 /* ── ■ HEADER ────────────────────────────────────────────────────── */
 .site-header {
@@ -126,11 +147,11 @@ body {
   border-radius: 999px;
   font-size: 14px;
   font-weight: 800;
-  transition: transform .2s, box-shadow .2s;
+  transition: transform .25s, box-shadow .25s;
   cursor: pointer;
   white-space: nowrap;
 }
-.button:hover { transform: translateY(-2px); }
+.button:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(112, 223, 127, 0.25); }
 .button-primary { background: var(--lime); color: #080d08; }
 .button-outline { border-color: var(--line); color: var(--text); background: transparent; }
 .button-outline:hover { border-color: var(--lime); color: var(--lime); }
@@ -202,11 +223,21 @@ body {
   z-index: 3;
   box-shadow: 0 16px 36px rgba(0,0,0,.6);
   pointer-events: none;
+  animation: floatGentle 6s ease-in-out infinite;
+}
+@keyframes floatGentle {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-8px) rotate(-3deg); }
+}
+.float-right { animation-name: floatGentleRight; }
+@keyframes floatGentleRight {
+  0%, 100% { transform: translateY(0) rotate(4deg); }
+  50% { transform: translateY(-8px) rotate(5deg); }
 }
 .mini-label { font: 9px var(--mono); color: #6a7a6b; }
 .success    { color: var(--lime); font-size: 11px; font-weight: 700; }
-.float-left  { top: 60px; left: 2%; transform: rotate(-4deg); }
-.float-right { top: 40px; right: 2%; transform: rotate(4deg); }
+.float-left  { top: 60px; left: 2%; }
+.float-right { top: 40px; right: 2%; }
 
 /* Concentric Rings Decorative Accents — Vibrant green visibility */
 .hero-rings, .section-rings {
@@ -326,7 +357,7 @@ pre { padding: 20px 22px; font: 13px/1.85 var(--mono); white-space: pre-wrap; ov
 .cli-cmd:hover {
   border-color: rgba(112,223,127,.3);
   background: #0e180e;
-  transform: translateX(3px);
+  transform: translateX(4px);
 }
 .cli-cmd.active {
   border-color: rgba(112,223,127,.4);
@@ -396,6 +427,11 @@ pre { padding: 20px 22px; font: 13px/1.85 var(--mono); white-space: pre-wrap; ov
   border: 1px solid var(--line);
   padding: 20px;
   border-radius: var(--r);
+  transition: transform .3s, border-color .3s;
+}
+.step:hover {
+  transform: translateY(-4px);
+  border-color: rgba(112, 223, 127, 0.3);
 }
 .step-number { font: 800 16px var(--mono); color: var(--lime); }
 .terminal-window.compact pre { padding: 14px 16px; font-size: 12px; }
@@ -426,6 +462,11 @@ pre { padding: 20px 22px; font: 13px/1.85 var(--mono); white-space: pre-wrap; ov
   display: flex;
   flex-direction: column;
   gap: 12px;
+  transition: transform .3s, border-color .3s;
+}
+.workflow-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(112, 223, 127, 0.35);
 }
 .workflow-top { display: flex; justify-content: space-between; align-items: center; font: 700 11px var(--mono); color: var(--lime); }
 .workflow-label { background: var(--lime-dim); padding: 3px 8px; border-radius: 4px; }
@@ -508,6 +549,41 @@ footer {
   padding-top: 24px;
 }
 
+/* ── 🌟 ENHANCED SMOOTH SCROLL REVEAL ANIMATIONS ─────────────────── */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(35px);
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.js .reveal-left {
+  opacity: 0;
+  transform: translateX(-40px);
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.js .reveal-right {
+  opacity: 0;
+  transform: translateX(40px);
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.js .reveal-scale {
+  opacity: 0;
+  transform: scale(0.93);
+  transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.js .stagger > * {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.js .reveal.in-view,
+.js .reveal-left.in-view,
+.js .reveal-right.in-view,
+.js .reveal-scale.in-view,
+.js .stagger.in-view > * {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+}
+
 /* ── 📱 ADVANCED MULTI-BREAKPOINT RESPONSIVE MEDIA QUERIES ───────── */
 
 /* Laptops & Medium Screens (1024px – 1200px) */
@@ -546,6 +622,7 @@ footer {
   .hero-actions { flex-direction: column; width: 100%; }
   .hero-actions .button { width: 100%; }
   
+  .proof-strip { padding: 14px 0; }
   .proof-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .proof-grid div { border: none; padding-left: 0; }
   

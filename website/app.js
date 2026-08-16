@@ -1,11 +1,11 @@
-/* ── TextLens — app.js ──────────────────────────────────────────── */
+/* ── TextLens — app.js (Advanced Scroll Animations & Active Nav Observer) ── */
 
-/* Mark <html> so CSS reveal animations can activate */
+/* Mark <html> so CSS reveal animations activate */
 document.documentElement.classList.add('js');
 
-/* ── Scroll reveal (IntersectionObserver) ──────────────────────── */
+/* ── Smooth Scroll & Reveal (IntersectionObserver with Scale & Blur) ── */
 (function () {
-  const targets = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .stagger');
+  const targets = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale, .reveal-blur, .stagger');
   if (!targets.length) return;
 
   const io = new IntersectionObserver(
@@ -13,17 +13,47 @@ document.documentElement.classList.add('js');
       entries.forEach((e) => {
         if (e.isIntersecting) {
           e.target.classList.add('in-view');
-          io.unobserve(e.target); // fire once
+          io.unobserve(e.target); // fire once when scrolled into view
         }
       });
     },
-    { threshold: 0.12, rootMargin: '0px 0px -48px 0px' }
+    { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
   );
 
   targets.forEach((el) => io.observe(el));
 })();
 
-/* ── Mobile navigation toggle ───────────────────────────────────── */
+/* ── Active Header Nav Link Observer on Scroll ─────────────────── */
+(function () {
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+  if (!sections.length || !navLinks.length) return;
+
+  const navObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const id = entry.target.getAttribute('id');
+          navLinks.forEach((link) => {
+            const href = link.getAttribute('href').substring(1);
+            if (href === id) {
+              link.style.color = 'var(--lime)';
+              link.style.fontWeight = '700';
+            } else {
+              link.style.color = '';
+              link.style.fontWeight = '';
+            }
+          });
+        }
+      });
+    },
+    { threshold: 0.3 }
+  );
+
+  sections.forEach((sec) => navObserver.observe(sec));
+})();
+
+/* ── Mobile Navigation Toggle ───────────────────────────────────── */
 (function () {
   const btn = document.querySelector('.menu-button');
   const nav = document.querySelector('.nav-links');
@@ -91,56 +121,5 @@ document.documentElement.classList.add('js');
 
   cmds.forEach((cmd) => {
     cmd.addEventListener('click', () => activate(cmd.dataset.tab));
-  });
-
-  /* Auto-cycle every 4 seconds when section is visible */
-  const tabOrder = ['models', 'doctor', 'discover', 'read', 'batch'];
-  let idx = 0;
-  let timer = null;
-
-  function startCycle() {
-    if (timer) return;
-    timer = setInterval(() => {
-      idx = (idx + 1) % tabOrder.length;
-      activate(tabOrder[idx]);
-    }, 4000);
-  }
-
-  function stopCycle() {
-    clearInterval(timer);
-    timer = null;
-  }
-
-  const cliSection = document.getElementById('cli-section');
-  if (cliSection) {
-    const sectionObs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) startCycle();
-        else stopCycle();
-      },
-      { threshold: 0.3 }
-    );
-    sectionObs.observe(cliSection);
-  }
-
-  /* Stop auto-cycle on manual click */
-  cmds.forEach((cmd) => {
-    cmd.addEventListener('click', () => {
-      stopCycle();
-      idx = tabOrder.indexOf(cmd.dataset.tab);
-    });
-  });
-})();
-
-/* ── FAQ smooth toggle ──────────────────────────────────────────── */
-(function () {
-  document.querySelectorAll('details').forEach((d) => {
-    d.addEventListener('toggle', () => {
-      if (d.open) {
-        d.querySelectorAll('p').forEach((p) => {
-          p.style.animation = 'fadeSlideIn .3s ease both';
-        });
-      }
-    });
   });
 })();
