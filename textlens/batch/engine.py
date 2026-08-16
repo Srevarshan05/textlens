@@ -58,22 +58,6 @@ class BatchOCR:
             enable_dashboard=True,
         )
         results = batch.run("./documents/")
-
-    Explicit file list::
-
-        results = batch.run([
-            "invoice1.pdf",
-            "scan001.png",
-            "report.pdf",
-        ])
-
-    Advanced with callbacks::
-
-        def on_done(task):
-            print(f"Done: {task.source_path.name} — {len(task.result_text)} chars")
-
-        batch = BatchOCR(model="smolvlm", workers=2)
-        batch.run("./docs/", on_file_complete=on_done)
     """
 
     def __init__(
@@ -119,6 +103,7 @@ class BatchOCR:
         self._pause_event = threading.Event()
         self._pause_event.set()          # set = not paused, clear = paused
         self._stop_event = threading.Event()
+        self._dashboard_close_event = threading.Event()
         self._metrics_lock = threading.RLock()
         self._log_lock = threading.Lock()
 
@@ -145,23 +130,7 @@ class BatchOCR:
         on_file_complete: Optional[Callable[[BatchTask], None]] = None,
         on_file_failed: Optional[Callable[[BatchTask], None]] = None,
     ) -> List[BatchTask]:
-        """Start batch processing and block until completed or cancelled.
-
-        Parameters
-        ----------
-        source : str | Path | list
-            - A directory path (str or Path) — scans for all supported files.
-            - A list of file paths to process explicitly.
-        on_file_complete : callable, optional
-            Called with the completed `BatchTask` when a file finishes successfully.
-        on_file_failed : callable, optional
-            Called with the failed `BatchTask` when a file exhausts all retries.
-
-        Returns
-        -------
-        list[BatchTask]
-            All processed tasks with final status and result metadata.
-        """
+        """Start batch processing and block until completed or cancelled."""
         self._on_file_complete = on_file_complete
         self._on_file_failed = on_file_failed
         self._config.input_source = source
@@ -214,13 +183,13 @@ class BatchOCR:
         for t in self._worker_threads:
             t.join()
 
-        # ── 6. Finalise ─────────────────────────────────────────────────
+        # ── 6. Finalise metrics & manifest ──────────────────────────────
         elapsed = time.time() - self._start_time
         all_tasks = self._queue.get_all_tasks()
 
         with self._metrics_lock:
             self._metrics.elapsed_time_sec = elapsed
-            if self._metrics.status not in (BatchStatus.CANCELLED,):
+            if self._metrics.status not in (BatchStatus.CANCELLED, BatchStatus.FAILED):
                 self._metrics.status = BatchStatus.COMPLETED
 
         # Export consolidated manifest
@@ -229,6 +198,16 @@ class BatchOCR:
                   self._metrics.processed_files,
                   self._metrics.failed_files,
                   manifest)
+
+        # ── 7. Keep Dashboard Alive if Enabled ──────────────────────────
+        if self._config.enable_dashboard and self._dashboard_thread and self._dashboard_thread.is_alive():
+            self._log("Dashboard remains active at http://%s:%d. Click 'Close & Return to Terminal' in dashboard or press Ctrl+C to finish.",
+                      self._config.dashboard_host, self._config.dashboard_port)
+            try:
+                # Wait until user clicks "Close & Return to Terminal" in dashboard
+                self._dashboard_close_event.wait()
+            except KeyboardInterrupt:
+                self._log("Dashboard closed by terminal interrupt.")
 
         return all_tasks
 
@@ -249,31 +228,60 @@ class BatchOCR:
         self._log("Batch job resumed.")
 
     def cancel(self) -> None:
-        """Signal all workers to stop after their current task finishes."""
+        """Signal all workers to stop immediately and cancel pending tasks."""
         self._stop_event.set()
         self._pause_event.set()  # Unblock any paused workers so they can exit
+        
+        # Mark all pending queued tasks as CANCELLED
+        all_tasks = self._queue.get_all_tasks()
+        for task in all_tasks:
+            if task.status == TaskStatus.QUEUED:
+                task.status = TaskStatus.FAILED
+                task.error = "Cancelled by user"
+
         with self._metrics_lock:
             self._metrics.status = BatchStatus.CANCELLED
-        self._log("Batch job cancelled by user.")
+            self._metrics.queued_files = 0
+
+        self._log("Batch job cancelled by user. Pending tasks stopped.")
+
+    def signal_dashboard_close(self) -> None:
+        """Signal dashboard to close and return execution to terminal."""
+        self._dashboard_close_event.set()
 
     def retry_failed(self) -> int:
-        """Re-enqueue all tasks that ultimately failed (max_retries exhausted).
-
-        Returns
-        -------
-        int
-            Number of tasks re-queued for retry.
-        """
+        """Re-enqueue all tasks that ultimately failed or were cancelled."""
         all_tasks = self._queue.get_all_tasks()
         count = 0
         for task in all_tasks:
             if task.status == TaskStatus.FAILED:
                 task.retries = 0
                 task.error = None
+                task.status = TaskStatus.QUEUED
                 self._queue.enqueue(task)
                 count += 1
+
         if count > 0:
-            self._log("Re-queued %d failed task(s) for retry.", count)
+            self._stop_event.clear()
+            self._pause_event.set()
+            with self._metrics_lock:
+                self._metrics.status = BatchStatus.RUNNING
+                self._metrics.queued_files = self._queue.size()
+            self._log("Re-queued %d task(s) for retry.", count)
+
+            # Respawn worker threads if they exited
+            alive_workers = [t for t in self._worker_threads if t.is_alive()]
+            if not alive_workers:
+                self._worker_threads.clear()
+                for i in range(self._config.workers):
+                    t = threading.Thread(
+                        target=self._worker_loop,
+                        name=f"BatchWorker-Retry-{i}",
+                        daemon=True,
+                    )
+                    t.start()
+                    self._worker_threads.append(t)
+
         return count
 
     def reconfigure(
@@ -282,25 +290,13 @@ class BatchOCR:
         output_format: Optional[str] = None,
         retries: Optional[int] = None,
     ) -> None:
-        """Reconfigure runtime settings without restarting the batch job.
-
-        Parameters
-        ----------
-        workers : int, optional
-            New target worker thread count.
-        output_format : str, optional
-            New output format ("json", "markdown", "csv", "txt").
-        retries : int, optional
-            New retry limit for future tasks.
-        """
+        """Reconfigure runtime settings without restarting the batch job."""
         if workers is not None:
             self._config.workers = workers
             with self._metrics_lock:
                 self._metrics.target_workers = workers
-                is_running = self._metrics.status == BatchStatus.RUNNING
-            # Spawn additional workers only for an active job. Starting
-            # workers while idle eagerly creates/downloads an OCR model and
-            # leaves threads polling an empty queue.
+                is_running = self._metrics.status in (BatchStatus.RUNNING, BatchStatus.PAUSED)
+
             if is_running:
                 current = sum(1 for t in self._worker_threads if t.is_alive())
                 for _ in range(max(0, workers - current)):
@@ -341,12 +337,9 @@ class BatchOCR:
 
     def _worker_loop(self) -> None:
         """Main loop executed by each worker thread."""
-        # Lazily import OCR here to avoid circular imports
         from textlens.ocr import OCR
         ocr = OCR(
             model=self._config.model_id,
-            # Backends auto-select CUDA/CPU only when the value is None.
-            # Passing the string "auto" falls through to their CPU path.
             device=self._config.device,
         )
 
@@ -357,9 +350,8 @@ class BatchOCR:
                 break
 
             # ── Dequeue next task ──────────────────────────────
-            task = self._queue.dequeue(block=True, timeout=2.0)
+            task = self._queue.dequeue(block=True, timeout=1.5)
             if task is None:
-                # Timeout — check if all tasks are done
                 all_tasks = self._queue.get_all_tasks()
                 pending = [t for t in all_tasks if t.status in (TaskStatus.QUEUED, TaskStatus.PROCESSING, TaskStatus.RETRYING)]
                 if not pending:
@@ -376,7 +368,6 @@ class BatchOCR:
             self._log("[%s] Processing: %s", threading.current_thread().name, task.source_path.name)
 
             try:
-                # ── Run inference ──────────────────────────────
                 t0 = time.time()
                 kwargs: Dict[str, Any] = {
                     "dpi": self._config.dpi,

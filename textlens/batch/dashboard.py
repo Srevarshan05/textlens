@@ -8,7 +8,8 @@ Serves a real-time web dashboard at http://localhost:8765 (default) with:
 - Clean overview layout with resizable panels (Tasks, Logs, System)
 - Real live CPU history graph (no dummy sparklines)
 - Premium vector SVG icons throughout (zero emojis)
-- PDF/HTML Batch Report Exporter
+- PDF Batch Report Exporter (downloads standard .pdf document when job is done)
+- Persistent server ("Close & Return to Terminal" button)
 - Interactive controls: pause, resume, cancel, retry failed
 - Runtime reconfiguration: workers, format, retries
 
@@ -267,17 +268,24 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
     align-items: center;
     gap: 6px;
   }
-  .refresh-btn {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 1rem;
-    transition: color 0.2s;
-  }
-  .refresh-btn:hover { color: var(--lime); }
 
-  /* ── 7 Clean KPI Cards (No fake lines, vector SVGs) ───────────── */
+  .btn-close-term {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: var(--red);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-close-term:hover {
+    background: var(--red);
+    color: #fff;
+  }
+
+  /* ── 7 Clean KPI Cards (Vector SVGs) ──────────────────────────── */
   .kpi-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -308,7 +316,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
   .kpi-icon-svg {
     width: 32px;
     height: 32px;
-    border-radius: 9px;
+    border-radius: 999px;
     display: grid;
     place-items: center;
     flex-shrink: 0;
@@ -791,6 +799,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
         <span>Last updated: <strong id="hdr-time">—</strong></span>
         <button class="refresh-btn" onclick="location.reload()" title="Refresh">↻</button>
       </div>
+      <button class="btn-close-term" onclick="closeDashboardAndExit()">Close &amp; Return to Terminal</button>
     </div>
   </header>
 
@@ -1073,11 +1082,11 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <div class="modal-overlay" id="exportModal">
   <div class="modal-card">
     <div class="modal-head">
-      <h3>Export Batch OCR Report</h3>
+      <h3>Export Batch OCR PDF Report</h3>
       <button class="modal-close" onclick="closeExportModal()">✕</button>
     </div>
     <div class="modal-body">
-      Generate a PDF report containing job execution metrics, configuration summary, hardware telemetry, and document task details.
+      Generate a standalone PDF document containing batch execution metrics, model configurations, hardware telemetry, and individual document processing results.
     </div>
     <div class="modal-summary-box">
       <div>Model: <strong id="m-model">glm-ocr</strong></div>
@@ -1098,6 +1107,7 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <script>
 let evtSource = null;
 let cpuHistory = [20, 25, 30, 22, 28, 35, 40, 32, 45, 50]; // real CPU history buffer
+let currentMetrics = null;
 
 function fmtTime(sec) {
   if (sec <= 0 || isNaN(sec)) return "0s";
@@ -1118,7 +1128,7 @@ function showToast(msg, ok=true) {
   const t = document.getElementById('toast');
   t.textContent = (ok ? '✓ ' : '⚠ ') + msg;
   t.className = 'toast show';
-  setTimeout(() => t.className = 'toast', 2400);
+  setTimeout(() => t.className = 'toast', 2800);
 }
 
 function updateCpuGraph(val) {
@@ -1140,7 +1150,7 @@ function updateCpuGraph(val) {
 }
 
 function updateMetrics(d) {
-  // Update Header & Clock
+  currentMetrics = d;
   const now = new Date();
   setText('hdr-time', now.toTimeString().split(' ')[0]);
   setText('hdr-model-id', d.model_id);
@@ -1284,6 +1294,11 @@ function reconfigure() {
 }
 
 function openExportModal() {
+  const isRunning = currentMetrics && (currentMetrics.status === 'RUNNING' || currentMetrics.queued_files > 0 || currentMetrics.active_workers > 0);
+  if (isRunning) {
+    showToast('Batch job is still running. Please wait until all tasks complete before exporting the report.', false);
+    return;
+  }
   document.getElementById('exportModal').classList.add('open');
 }
 
@@ -1293,132 +1308,22 @@ function closeExportModal() {
 
 function downloadReport() {
   closeExportModal();
-  showToast('Generating PDF Report...');
-  window.open('/api/export-report', '_blank');
+  showToast('Downloading PDF Report...');
+  window.location.href = '/api/export-report';
+}
+
+function closeDashboardAndExit() {
+  if (confirm("Close dashboard and return to terminal?")) {
+    fetch('/api/close-dashboard', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        showToast('Dashboard closed. Returning to terminal...');
+        setTimeout(() => { window.close(); }, 1200);
+      });
+  }
 }
 
 connectStream();
-</script>
-</body>
-</html>
-"""
-
-# ── Printable Report HTML Template ───────────────────────────────────────────
-_REPORT_HTML = """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<title>TextLens BatchOCR Summary Report</title>
-<style>
-  @page { size: A4; margin: 18mm; }
-  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1a202c; background: #fff; margin: 0; padding: 24px; line-height: 1.5; }
-  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #70df7f; padding-bottom: 16px; margin-bottom: 24px; }
-  .brand { display: flex; align-items: center; gap: 12px; }
-  .brand img { width: 36px; height: 36px; object-fit: contain; }
-  .brand h1 { font-size: 24px; font-weight: 800; margin: 0; color: #0f172a; }
-  .subtitle { font-size: 13px; color: #64748b; }
-  .meta-tag { font-size: 12px; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; font-weight: 600; }
-  
-  .section-title { font-size: 16px; font-weight: 700; color: #0f172a; margin: 24px 0 12px; border-left: 4px solid #70df7f; padding-left: 10px; }
-  
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-  .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; }
-  .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700; margin-bottom: 4px; }
-  .card-val { font-size: 18px; font-weight: 800; color: #0f172a; }
-  
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-  th, td { border: 1px solid #e2e8f0; padding: 9px 12px; text-align: left; }
-  th { background: #f1f5f9; font-weight: 700; color: #334155; }
-  tr:nth-child(even) { background: #f8fafc; }
-  
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
-  .badge-COMPLETED { background: #dcfce7; color: #15803d; }
-  .badge-FAILED { background: #fee2e2; color: #b91c1c; }
-  .badge-QUEUED { background: #fef9c3; color: #a16207; }
-  
-  .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 11px; color: #94a3b8; text-align: center; }
-  
-  @media print {
-    .no-print { display: none; }
-    body { padding: 0; }
-  }
-</style>
-</head>
-<body>
-<div class="no-print" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
-  <span style="font-size:13px;color:#64748b;">PDF Preview — Click print to save as PDF document</span>
-  <button onclick="window.print()" style="background:#15803d;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-weight:bold;cursor:pointer;">🖨 Save / Print PDF</button>
-</div>
-
-<div class="header">
-  <div class="brand">
-    <img src="/logo.png" alt="TextLens" onerror="this.style.display='none'"/>
-    <div>
-      <h1>TextLens BatchOCR Report</h1>
-      <div class="subtitle">Framework Execution & Document Summary</div>
-    </div>
-  </div>
-  <div class="meta-tag">Generated: {{TIMESTAMP}}</div>
-</div>
-
-<div class="section-title">Job Summary & Configuration</div>
-<div class="grid-2">
-  <div class="card">
-    <div class="card-label">Configured Model</div>
-    <div class="card-val">{{MODEL_ID}}</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Total Duration</div>
-    <div class="card-val">{{DURATION}}</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Files Processed</div>
-    <div class="card-val">{{PROCESSED}} / {{TOTAL_FILES}}</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Success Rate</div>
-    <div class="card-val">{{SUCCESS_RATE}}</div>
-  </div>
-</div>
-
-<div class="section-title">Hardware Telemetry</div>
-<div class="grid-2">
-  <div class="card">
-    <div class="card-label">GPU Acceleration</div>
-    <div class="card-val" style="font-size:15px">{{GPU_NAME}}</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Parallel Workers</div>
-    <div class="card-val" style="font-size:15px">{{WORKERS}} worker thread(s)</div>
-  </div>
-</div>
-
-<div class="section-title">Document Processing Breakdown</div>
-<table>
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>File Name</th>
-      <th>Status</th>
-      <th>Duration</th>
-      <th>Pages</th>
-      <th>Output Path</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{TASKS_ROWS}}
-  </tbody>
-</table>
-
-<div class="footer">
-  TextLens Local VLM OCR Framework · MIT Licensed Report
-</div>
-
-<script>
-  // Auto-trigger print dialog if requested
-  if (window.location.search.includes('print=1')) {
-    window.onload = function() { window.print(); }
-  }
 </script>
 </body>
 </html>
@@ -1462,13 +1367,13 @@ class _DashboardHandler(BaseHTTPRequestHandler):
 
         if path == "/api/pause":
             self.engine.pause()
-            self._serve_json({"ok": True, "message": "Job paused"})
+            self._serve_json({"ok": True, "message": "Job paused successfully"})
         elif path == "/api/resume":
             self.engine.resume()
-            self._serve_json({"ok": True, "message": "Job resumed"})
+            self._serve_json({"ok": True, "message": "Job resumed successfully"})
         elif path == "/api/cancel":
             self.engine.cancel()
-            self._serve_json({"ok": True, "message": "Job cancelled"})
+            self._serve_json({"ok": True, "message": "Batch job cancelled by user"})
         elif path == "/api/retry-failed":
             n = self.engine.retry_failed()
             self._serve_json({"ok": True, "message": f"Re-queued {n} failed task(s)"})
@@ -1485,6 +1390,9 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                 self._serve_json({"ok": True, "message": "Reconfigured successfully"})
             except Exception as exc:
                 self._serve_json({"ok": False, "message": str(exc)}, 400)
+        elif path == "/api/close-dashboard":
+            self.engine.signal_dashboard_close()
+            self._serve_json({"ok": True, "message": "Dashboard closed. Returning to terminal..."})
         else:
             self.send_error(404, "Not Found")
 
@@ -1524,47 +1432,29 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Logo Not Found")
 
     def _serve_report(self) -> None:
-        """Generate and serve printable PDF/HTML Batch report."""
+        """Generate and serve PDF Batch report when job is done."""
         m = self.engine.get_metrics()
         tasks = self.engine.get_tasks()
 
-        rows = []
-        for idx, t in enumerate(tasks, start=1):
-            dur = f"{t.duration_sec:.2f}s" if t.duration_sec > 0 else "—"
-            out = str(t.output_path) if t.output_path else "—"
-            rows.append(
-                f"<tr>"
-                f"<td>{idx}</td>"
-                f"<td><strong>{t.source_path.name}</strong></td>"
-                f"<td><span class='badge badge-{t.status.value}'>{t.status.value}</span></td>"
-                f"<td>{dur}</td>"
-                f"<td>{t.page_count or 1}</td>"
-                f"<td style='font-family:monospace;font-size:11px'>{out}</td>"
-                f"</tr>"
-            )
+        # Check if job is still active
+        is_running = m.status == BatchStatus.RUNNING or any(t.status in ("QUEUED", "PROCESSING", "RETRYING") for t in tasks)
+        if is_running:
+            self._serve_json({
+                "ok": False,
+                "message": "Batch job is currently running. Please wait until all tasks complete before exporting the report."
+            }, status=400)
+            return
 
-        rows_html = "".join(rows) if rows else "<tr><td colspan='6'>No files processed yet.</td></tr>"
+        from textlens.batch.report import SimplePDFReport
+        pdf_bytes = SimplePDFReport(m, tasks).generate()
 
-        dur_fmt = f"{int(m.elapsed_time_sec // 60)}m {int(m.elapsed_time_sec % 60)}s" if m.elapsed_time_sec > 60 else f"{m.elapsed_time_sec:.1f}s"
-        succ_rate = f"{(m.processed_files / m.total_files * 100):.1f}%" if m.total_files > 0 else "100%"
-
-        html = _REPORT_HTML.replace("{{TIMESTAMP}}", time.strftime("%Y-%m-%d %H:%M:%S"))
-        html = html.replace("{{MODEL_ID}}", m.model_id)
-        html = html.replace("{{DURATION}}", dur_fmt)
-        html = html.replace("{{PROCESSED}}", str(m.processed_files))
-        html = html.replace("{{TOTAL_FILES}}", str(m.total_files))
-        html = html.replace("{{SUCCESS_RATE}}", succ_rate)
-        html = html.replace("{{GPU_NAME}}", m.gpu_name or "NVIDIA CUDA GPU")
-        html = html.replace("{{WORKERS}}", str(m.target_workers))
-        html = html.replace("{{TASKS_ROWS}}", rows_html)
-
-        body = html.encode("utf-8")
         self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Type", "application/pdf")
+        self.send_header("Content-Disposition", 'attachment; filename="TextLens_BatchOCR_Report.pdf"')
+        self.send_header("Content-Length", str(len(pdf_bytes)))
         self._cors_headers()
         self.end_headers()
-        self.wfile.write(body)
+        self.wfile.write(pdf_bytes)
 
     def _serve_json(self, payload: Any, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
