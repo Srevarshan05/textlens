@@ -68,6 +68,16 @@ body {
   text-decoration: none;
   flex-shrink: 0;
 }
+.brand img, .brand-logo-img {
+  width: 32px;
+  height: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  object-fit: contain;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: block;
+}
 .nav-links {
   display: flex;
   gap: 28px;
