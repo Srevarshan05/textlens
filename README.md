@@ -64,21 +64,21 @@ makes `pip install textlens-srevarshan` and catalog-only CLI commands fast.
 
 | Need | Install command |
 | --- | --- |
-| Browse the model catalog and basic utilities | `python -m pip install textlens-srevarshan` |
-| Search live Hugging Face OCR/VLM candidates | `python -m pip install "textlens-srevarshan[catalog]"` |
-| Run local VLM OCR and BatchOCR | `python -m pip install "textlens-srevarshan[inference,ui]"` |
-| Run the local REST API | `python -m pip install "textlens-srevarshan[inference,server]"` |
-| Install every optional feature | `python -m pip install "textlens-srevarshan[all]"` |
+| Browse the model catalog and basic utilities | `python -m pip install textlens` |
+| Search live Hugging Face OCR/VLM candidates | `python -m pip install "textlens[catalog]"` |
+| Run local VLM OCR and BatchOCR | `python -m pip install "textlens[inference,ui]"` |
+| Run the local REST API | `python -m pip install "textlens[inference,server]"` |
+| Install every optional feature | `python -m pip install "textlens[all]"` |
 
 For NVIDIA GPU OCR, install the appropriate PyTorch CUDA wheel first, as shown
 in the next section. Then install the `inference` extra. The following commands
 are useful after a CUDA-enabled PyTorch installation:
 
 ```bash
-python -m pip install "textlens-srevarshan[inference,ui]"
-python -m pip install "textlens-srevarshan[inference,server]"
+python -m pip install "textlens[inference,ui]"
+python -m pip install "textlens[inference,server]"
 # Full developer installation, including the optional terminal UI/diagnostics:
-python -m pip install "textlens-srevarshan[all]"
+python -m pip install "textlens[all]"
 ```
 
 ### Fast CLI behaviour
@@ -96,7 +96,7 @@ backends. To research additional OCR/VLM repositories from the live Hugging
 Face Hub, install the small `catalog` extra and run:
 
 ```bash
-python -m pip install "textlens-srevarshan[catalog]"
+python -m pip install "textlens[catalog]"
 textlens discover                         # opens an interactive search prompt
 textlens discover DeepSeek-OCR --compatible
 textlens discover --search "PaddleOCR-VL" --limit 10
@@ -163,7 +163,7 @@ The `OCR` API is the recommended registry-based interface. It downloads a regist
 Install its inference dependencies first:
 
 ```bash
-python -m pip install "textlens-srevarshan[inference]"
+python -m pip install "textlens[inference]"
 ```
 
 ```python
@@ -256,7 +256,7 @@ HardwareDoctor().print_report(report)
 Install the server extra before starting the API:
 
 ```bash
-python -m pip install "textlens-srevarshan[server,inference]"
+python -m pip install "textlens[server,inference]"
 ```
 
 ```python

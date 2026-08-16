@@ -3,7 +3,7 @@ requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "textlens-srevarshan"
+name = "textlens"
 version = "0.2.6"
 description = "Local, VLM-powered OCR for Python: images, PDFs, batch processing, CUDA diagnostics, and a REST API."
 readme = "README.md"
