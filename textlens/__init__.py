@@ -12,7 +12,7 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any, Dict, Tuple
 
-__version__ = "0.2.6"
+__version__ = "0.1.0"
 __author__ = "TextLens Contributors"
 
 # (module, attribute) pairs are imported only when the public name is used.
