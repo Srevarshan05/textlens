@@ -488,46 +488,15 @@ textlens.serve(
           <div class="catalog-shell reveal">
             <div>
               <p class="section-kicker">MODEL CATALOG</p>
-              <h2>Four capable backends<br />One consistent surface</h2>
-              <p style="margin-top:12px;color:var(--muted-text)">TextLens lazy-loads vision language models so you can switch backends by changing one parameter</p>
+              <h2 style="font-size:clamp(26px, 3vw, 40px); font-weight:800; color:#fff; line-height:1.1; margin-top:8px;">Choose the right OCR engine<br />for the hardware you have</h2>
+              <p style="color:var(--text-soft); font-size:15px; margin-top:14px;">TextLens supports VLM-powered OCR models. NVIDIA CUDA GPUs are strongly recommended. Apple Silicon MPS optimisation is in progress</p>
             </div>
-
-            <div class="model-cards">
-              <article class="model-card active-card">
-                <div class="model-card-head">
-                  <strong>glm-ocr</strong>
-                  <span class="badge badge-green">Default</span>
-                </div>
-                <p>General document OCR, tables, and formula extraction. Strong balance of accuracy and VRAM efficiency</p>
-                <div class="model-meta"><span>6 GB VRAM</span><span>0.9B params</span></div>
-              </article>
-
-              <article class="model-card">
-                <div class="model-card-head">
-                  <strong>lighton-ocr</strong>
-                  <span class="badge badge-blue">Academic</span>
-                </div>
-                <p>Academic documents, multi-column research papers, and multi-language structured text</p>
-                <div class="model-meta"><span>8 GB VRAM</span><span>1B params</span></div>
-              </article>
-
-              <article class="model-card">
-                <div class="model-card-head">
-                  <strong>hunyuan-ocr</strong>
-                  <span class="badge badge-purple">Structured</span>
-                </div>
-                <p>Complex document layouts, mixed chart/text pages, and schema-constrained JSON extraction</p>
-                <div class="model-meta"><span>8 GB VRAM</span><span>~1B params</span></div>
-              </article>
-
-              <article class="model-card">
-                <div class="model-card-head">
-                  <strong>smolvlm</strong>
-                  <span class="badge badge-yellow">Lightweight</span>
-                </div>
-                <p>Ultra-compact VLM for laptop GPUs, lower VRAM footprints, and quick local testing</p>
-                <div class="model-meta"><span>2 GB VRAM</span><span>256M params</span></div>
-              </article>
+            <div class="catalog-list">
+              <div><span class="model-dot active"></span><strong>glm-ocr</strong><small>0.9B &middot; 6 GB &middot; Default</small></div>
+              <div><span class="model-dot"></span><strong>lighton-ocr</strong><small>1B &middot; 8 GB &middot; Scientific docs</small></div>
+              <div><span class="model-dot"></span><strong>hunyuan-ocr</strong><small>~1B &middot; 8 GB &middot; Layouts &amp; charts</small></div>
+              <div><span class="model-dot"></span><strong>smolvlm</strong><small>256M &middot; 2 GB &middot; Low-VRAM devices</small></div>
+              <a class="text-link" href="docs.html#models" style="margin-top:16px; color:var(--lime); text-decoration:none; font-weight:700; font-size:13px; display:inline-block;">Full model details <span>&rarr;</span></a>
             </div>
           </div>
         </div>
@@ -548,18 +517,32 @@ textlens.serve(
 
     </main>
 
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <div class="footer-brand">
-          <img src="assets/logo.png" alt="TextLens logo" class="brand-logo-img" />
-          <span>TextLens Framework &copy; 2026 &middot; MIT License</span>
+    <footer>
+      <div class="container footer-grid">
+        <div>
+          <a class="brand" href="#top" aria-label="TextLens home" style="gap:10px; margin-bottom:12px; display:inline-flex;">
+            <img src="assets/logo.png" alt="TextLens logo" class="brand-logo-img" />
+            <span style="font-size:18px; font-weight:800; letter-spacing:-0.5px; color:#fff;">TextLens</span>
+          </a>
+          <p>Local VLM-powered OCR for Python developers</p>
         </div>
-        <div class="footer-links">
-          <a href="#top">Back to top &uarr;</a>
-          <a href="https://pypi.org/project/textlens-ocr/" target="_blank">PyPI</a>
-          <a href="https://github.com/Srevarshan05/textlens" target="_blank">GitHub</a>
-          <a href="docs.html">Docs</a>
+        <div>
+          <span>EXPLORE</span>
+          <a href="#cli-section">CLI Showcase</a>
+          <a href="#dashboard-showcase">Dashboard</a>
+          <a href="#quickstart">Quick start</a>
+          <a href="#doctor">Doctor</a>
         </div>
+        <div>
+          <span>RESOURCES</span>
+          <a href="docs.html">Documentation</a>
+          <a href="https://pypi.org/project/textlens-ocr/" target="_blank">PyPI Package</a>
+          <a href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <span>&copy; 2026 TextLens &middot; MIT licensed</span>
+        <span>Built for local-first document AI</span>
       </div>
     </footer>
 
