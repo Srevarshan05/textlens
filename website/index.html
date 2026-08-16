@@ -55,6 +55,12 @@
             <a class="button button-primary" href="#quickstart">Start building &darr;</a>
             <a class="button button-outline" href="docs.html">Read the docs</a>
           </div>
+          <div style="display:flex;justify-content:center;margin-bottom:16px;">
+            <a href="https://pypi.org/project/textlens-ocr/" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:rgba(112,223,127,0.1);border:1px solid rgba(112,223,127,0.3);color:#70df7f;padding:6px 16px;border-radius:999px;font-size:0.8rem;font-weight:700;text-decoration:none;transition:all 0.2s;">
+              <span style="width:8px;height:8px;border-radius:50%;background:#70df7f;display:inline-block;box-shadow:0 0 8px #70df7f;"></span>
+              Now Officially Available on PyPI &middot; <code style="font-family:monospace;color:#fff;">pip install textlens-ocr</code> &rarr;
+            </a>
+          </div>
           <div class="install-pill">
             <span class="terminal-dot"></span>
             <code>pip install "textlens-ocr[inference,ui]"</code>
@@ -288,6 +294,50 @@ text = ocr.read(<span class="t-green">"invoice.pdf"</span>)
   <span class="g">&#10003;</span> receipt_q3.pdf   <span class="d">→ 892 chars  (2.8s)</span>
   <span class="y">&#8635;</span> contract_v2.pdf  <span class="d">retrying (1/2)...</span>
   <span class="g">&#10003;</span> scan_aug.png     <span class="d">→ 2,104 chars (3.4s)</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── BatchOCR Dashboard Showcase ────────────────────────── -->
+      <section id="dashboard-showcase" class="section dashboard-showcase" style="background:#070b07; border-top:1px solid #142416; border-bottom:1px solid #142416; padding:80px 0;">
+        <div class="container">
+          <div class="section-head text-center reveal">
+            <p class="section-kicker" style="color:#70df7f; font-weight:700; letter-spacing:1px;">LIVE MONITORING DASHBOARD</p>
+            <h2 style="font-size:2.2rem; font-weight:800; color:#fff; margin-top:8px;">BatchOCR Dashboard &amp; PDF Report Exporter</h2>
+            <p class="section-lead" style="color:#8ba38e; max-width:720px; margin:12px auto 0; font-size:1.02rem; line-height:1.6;">
+              Monitor parallel document extraction in real-time at <code style="color:#70df7f; background:rgba(112,223,127,0.1); padding:2px 8px; border-radius:6px;">http://127.0.0.1:8765</code>.<br />
+              Inspect GPU/CPU telemetry, control job execution on the fly, resize UI panels, and download print-ready PDF reports.
+            </p>
+          </div>
+
+          <div class="dashboard-img-wrapper reveal" style="margin-top:40px; position:relative; border-radius:18px; overflow:hidden; border:1px solid #1f3621; box-shadow: 0 25px 70px rgba(0,0,0,0.85);">
+            <img src="assets/batch-dashboard-screenshot.png" alt="BatchOCR Live Dashboard Screenshot" style="width:100%; height:auto; display:block;" />
+          </div>
+
+          <div class="dashboard-features-grid" style="margin-top:44px; display:grid; grid-template-columns: repeat(3, 1fr); gap:24px;">
+            <div class="dash-feature-card" style="background:#0b120c; border:1px solid #182a1a; border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:rgba(112,223,127,0.12); display:grid; place-items:center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#70df7f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <h3 style="font-size:1.1rem; font-weight:700; color:#fff;">Parallel Workers &amp; Real Telemetry</h3>
+              <p style="font-size:0.88rem; color:#7e9481; line-height:1.6;">Process document folders in parallel with real live CPU usage graphs, RAM tracking, and NVIDIA GPU/VRAM telemetry — zero fake sparklines.</p>
+            </div>
+
+            <div class="dash-feature-card" style="background:#0b120c; border:1px solid #182a1a; border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:rgba(234,179,8,0.12); display:grid; place-items:center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+              <h3 style="font-size:1.1rem; font-weight:700; color:#fff;">Live Job Controls &amp; Resizable Panels</h3>
+              <p style="font-size:0.88rem; color:#7e9481; line-height:1.6;">Pause, Resume, Cancel, and Retry Failed jobs on the fly. Drag-to-resize the Tasks list and Live Streaming Log Console to match your workflow.</p>
+            </div>
+
+            <div class="dash-feature-card" style="background:#0b120c; border:1px solid #182a1a; border-radius:14px; padding:24px; display:flex; flex-direction:column; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:rgba(168,85,247,0.12); display:grid; place-items:center;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </div>
+              <h3 style="font-size:1.1rem; font-weight:700; color:#fff;">Printable PDF Execution Report Exporter</h3>
+              <p style="font-size:0.88rem; color:#7e9481; line-height:1.6;">Download standard, print-ready PDF reports (<code style="color:#a855f7;">TextLens_BatchOCR_Report.pdf</code>) summarizing metrics, hardware stats, and document breakdown tables with a single click.</p>
             </div>
           </div>
         </div>
