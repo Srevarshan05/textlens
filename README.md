@@ -1,191 +1,155 @@
 <p align="center">
-  <img src="Text-Lens.png" alt="TextLens logo" width="350" />
+  <a href="https://github.com/Srevarshan05/textlens">
+    <img src="https://raw.githubusercontent.com/Srevarshan05/textlens/main/website/assets/logo.png" alt="TextLens Logo" width="180" style="border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);" />
+  </a>
 </p>
 
-# TextLens
+<h1 align="center">TextLens</h1>
 
-**Local OCR for Python developers, built around modern vision-language models (VLMs).**
+<p align="center">
+  <strong>High-performance, local VLM-powered OCR framework for Python & CLI.</strong>
+</p>
 
-TextLens makes local OCR reusable: initialise an OCR client, give it an image or PDF, and receive text. It also provides model discovery and caching, CUDA diagnostics, a REST API, and BatchOCR for processing document folders with exports and live progress.
+<p align="center">
+  <a href="https://pypi.org/project/textlens-ocr/"><img src="https://img.shields.io/pypi/v/textlens-ocr.svg?color=70df7f&style=flat-square" alt="PyPI version" /></a>
+  <a href="https://pypi.org/project/textlens-ocr/"><img src="https://img.shields.io/pypi/pyversions/textlens-ocr.svg?color=3b82f6&style=flat-square" alt="Python Versions" /></a>
+  <a href="https://github.com/Srevarshan05/textlens/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Srevarshan05/textlens.svg?color=a855f7&style=flat-square" alt="License" /></a>
+  <a href="https://github.com/Srevarshan05/textlens"><img src="https://img.shields.io/github/stars/Srevarshan05/textlens.svg?color=eab308&style=flat-square" alt="GitHub Stars" /></a>
+</p>
 
-> **Early release notice.** TextLens is designed primarily for NVIDIA CUDA GPUs. Most supported engines are VLMs, so an NVIDIA RTX/CUDA-capable GPU is strongly recommended for practical local OCR. CPU fallback exists but is much slower for large documents and batches. Apple Silicon / MPS optimisation is under active investigation and is **not a supported acceleration target yet**.
+---
 
-## Why TextLens?
+## 🌟 What is TextLens?
 
-OCR projects repeatedly need the same work: choose a capable model, download it, prepare images and PDFs, select a device, write prompts, manage batch failures, and save usable output. TextLens packages that work behind a Python-first API so the OCR code can stay small, readable, and reusable.
+**TextLens** makes local Vision-Language Model (VLM) OCR simple, reusable, and blazing fast. Initialize a unified OCR client, pass any image or PDF document, and receive clean, structured text output. 
 
-## Supported models
+TextLens includes **model discovery and local caching**, **automated CUDA hardware diagnostics**, a **FastAPI REST server microservice**, and a **parallel BatchOCR engine featuring a real-time live monitoring dashboard with PDF report exporting**.
 
-The registry currently exposes four locally downloadable VLM/OCR models:
+> 💡 **GPU Acceleration Note:** TextLens is built for local VLM inference and is optimized for **NVIDIA CUDA GPUs** (RTX 4050/3060/4090, etc.). CPU fallback is supported for light testing. Apple Silicon (MPS) optimization is under active development.
 
-| ID | Model | Intended use | Recommended GPU memory |
-| --- | --- | --- | --- |
-| `glm-ocr` | GLM OCR (default) | General document OCR, tables, formulas | 6 GB VRAM |
-| `lighton-ocr` | LightOnOCR | Academic and multilingual documents | 8 GB VRAM |
-| `hunyuan-ocr` | HunyuanOCR | Complex layouts, charts, and structured extraction | 8 GB VRAM |
-| `smolvlm` | SmolVLM-256M | Laptops, edge devices, and low-VRAM use | 2 GB VRAM |
+---
 
-Inspect the live catalog on your machine with `textlens models` or `ModelManager.models()`.
+## ✨ Unique Features & Highlights
 
-## Install
+### 1. 📊 Parallel BatchOCR Engine & Live Web Dashboard
+- **Parallel Document Processing**: Process entire document folders or file lists in parallel with worker thread pools and automatic retry logic.
+- **Live Monitoring Dashboard (`http://127.0.0.1:8765`)**: Zero-dependency local web dashboard featuring real-time SSE progress streaming.
+- **Real Hardware Telemetry**: Live CPU usage line graphs, RAM allocation, and NVIDIA GPU/VRAM utilization (no dummy lines or placeholder sparklines).
+- **Interactive Job Controls**: Pause, Resume, Cancel, and Retry Failed tasks on the fly, with dynamic worker thread scaling.
+- **Resizable Interface Panels**: Click and drag the bottom edge of the Tasks list and Live Streaming Console to expand them to any height.
+- **📄 Printable PDF Execution Report Exporter**: Download standard, print-ready PDF reports (`TextLens_BatchOCR_Report.pdf`) summarizing execution metrics, configuration, hardware stats, and per-file task results with one click.
 
-TextLens requires Python 3.9+. Current PyTorch stable releases may require Python 3.10+, so use Python 3.10+ for the smoothest GPU installation.
+### 2. 🤖 Supported VLM Backends
+| Model ID | Model Name | Primary Capabilities | Recommended VRAM |
+| :--- | :--- | :--- | :--- |
+| `glm-ocr` | **GLM OCR** *(Default)* | General document OCR, tables, formulas, receipts | **6 GB VRAM** |
+| `lighton-ocr` | **LightOnOCR** | Academic papers, complex layouts, multilingual docs | **8 GB VRAM** |
+| `hunyuan-ocr` | **HunyuanOCR** | Dense document extraction, charts, structured JSON | **8 GB VRAM** |
+| `smolvlm` | **SmolVLM-256M** | Fast lightweight OCR for laptops and low-VRAM GPUs | **2 GB VRAM** |
 
-```bash
-git clone https://github.com/Srevarshan05/textlens.git
-cd textlens
-python -m venv .venv
-```
+### 3. ⚡ Zero-Bloat Modular Extras
+The core `textlens-ocr` package remains ultra-lightweight (**< 1 MB**). Heavier AI libraries (`torch`, `transformers`, `fastapi`, `rich`) load on-demand when feature extras are requested.
 
-Activate the environment:
+---
 
-```powershell
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-```
+## 📦 Installation
 
-```bash
-# macOS/Linux
-source .venv/bin/activate
-```
-
-Install the lightweight catalog/utilities package first. This is enough for
-fast commands such as `textlens models` and for inspecting the local catalog:
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install -e .
-```
-
-### Choose the features you need
-
-TextLens keeps its large, optional stacks out of the default installation. This
-makes `pip install textlens-ocr` and catalog-only CLI commands fast.
-
-| Need | Install command |
-| --- | --- |
-| Browse the model catalog and basic utilities | `python -m pip install textlens-ocr` |
-| Search live Hugging Face OCR/VLM candidates | `python -m pip install "textlens-ocr[catalog]"` |
-| Run local VLM OCR and BatchOCR | `python -m pip install "textlens-ocr[inference,ui]"` |
-| Run the local REST API | `python -m pip install "textlens-ocr[server,inference]"` |
-| Install every optional feature | `python -m pip install "textlens-ocr[all]"` |
-
-For NVIDIA GPU OCR, install the appropriate PyTorch CUDA wheel first, as shown
-in the next section. Then install the `inference` extra. The following commands
-are useful after a CUDA-enabled PyTorch installation:
+TextLens requires Python 3.9+.
 
 ```bash
-python -m pip install "textlens-ocr[inference,ui]"
-python -m pip install "textlens-ocr[inference,server]"
-# Full developer installation, including the optional terminal UI/diagnostics:
-python -m pip install "textlens-ocr[all]"
+# Basic installation (Model catalog & CLI utilities)
+pip install textlens-ocr
 ```
 
-### Fast CLI behaviour
+### Choose your feature extras:
 
-`textlens models`, `textlens --help`, and model-catalog imports load only
-TextLens metadata. They do **not** import PyTorch, Transformers, FastAPI, or
-download models. This keeps catalog commands responsive even on a fresh
-installation. OCR dependencies and model weights load only when you request an
-OCR, download, server, or batch-inference feature.
+| Requirements | Install Command |
+| :--- | :--- |
+| **Catalog & CLI Utilities** | `pip install textlens-ocr` |
+| **Full VLM OCR & BatchOCR Dashboard** | `pip install "textlens-ocr[inference,ui]"` |
+| **REST API Server Microservice** | `pip install "textlens-ocr[inference,server]"` |
+| **Live Hugging Face Candidate Discovery** | `pip install "textlens-ocr[catalog]"` |
+| **All Features (Complete Developer Suite)** | `pip install "textlens-ocr[all]"` |
 
-### Live model discovery for your hardware
+> 🛠️ **NVIDIA CUDA Setup:** For GPU acceleration, install PyTorch with CUDA support first:
+> ```bash
+> pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+> pip install "textlens-ocr[inference,ui]"
+> ```
 
-The built-in catalog (`textlens models`) contains only TextLens-supported
-backends. To research additional OCR/VLM repositories from the live Hugging
-Face Hub, install the small `catalog` extra and run:
+---
+
+## 💻 CLI Commands Reference
+
+TextLens comes with a fast, zero-delay Command Line Interface:
 
 ```bash
-python -m pip install "textlens-ocr[catalog]"
-textlens discover                         # opens an interactive search prompt
-textlens discover DeepSeek-OCR --compatible
-textlens discover --search "PaddleOCR-VL" --limit 10
+# 1. Inspect local hardware, CUDA drivers, and VRAM compatibility
+textlens doctor
+
+# 2. View official VLM model catalog and download status
+textlens models
+
+# 3. Discover live Hugging Face VLM models matching your GPU
+textlens discover --compatible
+
+# 4. Perform instant OCR on a single image or PDF document
+textlens read invoice.png --model glm-ocr --device cuda
+
+# 5. Run parallel BatchOCR with live monitoring dashboard
+textlens batch ./documents/ --model glm-ocr --workers 2 --format json
+
+# 6. Start the local REST API server with Swagger UI
+textlens serve --host 127.0.0.1 --port 8000
+
+# 7. Model lifecycle management
+textlens model install smolvlm
+textlens model info glm-ocr
+textlens model remove smolvlm
 ```
 
-`textlens discover` searches Hugging Face **by model name only**. Enter a full
-or partial repository/model name such as `DeepSeek-OCR`, `PaddleOCR-VL`, or
-`GOT-OCR2_0`. A blank interactive search shows popular OCR/VLM repositories.
-`textlens discover <model-name>` and `--search <model-name>` are the
-non-interactive forms for scripts.
+---
 
-`--include-unknown` is a `discover` option only. It includes repositories that
-do not publish parameter metadata and labels their hardware fit as `VRAM not
-published`; TextLens never treats that label as GPU compatibility. When it is
-combined with `--compatible-only`, verified compatible models are shown first
-and explicitly requested unverified models remain visible for research.
+## 🐍 Python API Examples
 
-`discover` does not show a Downloads column. It shows models with published
-parameter information by default, a VRAM guide, detected GPU fit, pipeline,
-and use-case signals. Official TextLens models retain their catalog minimum
-VRAM; other Hub repositories use a conservative fp16 estimate. These are
-discovery recommendations, not a guarantee that a model will run or a
-statement that TextLens already has an inference backend for it.
-
-## NVIDIA CUDA setup (Windows and Linux)
-
-You need an NVIDIA GPU and a recent NVIDIA graphics driver. For normal TextLens use, you generally **do not need to install the full CUDA Toolkit**: PyTorch's CUDA wheel includes the CUDA runtime it needs. Install the toolkit only if you are compiling CUDA software yourself.
-
-1. Check that Windows/Linux can see your GPU:
-
-   ```bash
-   nvidia-smi
-   ```
-
-   If this command is missing or errors, install or update the driver from [NVIDIA Drivers](https://www.nvidia.com/en-us/drivers/), restart, and run it again.
-
-2. In the activated virtual environment, use the command currently shown by the [official PyTorch installer selector](https://pytorch.org/get-started/locally/) for your OS, Python, Pip, and CUDA platform. For example, the CUDA 12.8 wheel is:
-
-   ```bash
-   python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-   ```
-
-   Choose `cu118`, `cu126`, or `cu128` only when that is what the official selector recommends for your driver/platform. Do not mix a CPU-only PyTorch package with a CUDA wheel in the same environment.
-
-3. Install TextLens:
-
-   ```bash
-   python -m pip install -e .
-   ```
-
-4. Verify both PyTorch and TextLens:
-
-   ```bash
-   python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'not available')"
-   textlens doctor
-   ```
-
-`CUDA: True` means PyTorch can accelerate TextLens. If an NVIDIA GPU is present but this prints `False`, run `textlens doctor`; it reports the detected driver and a suggested PyTorch command. The authoritative PyTorch instructions are linked above because supported CUDA wheel versions change over time.
-
-## Quick start: modern API
-
-The `OCR` API is the recommended registry-based interface. It downloads a registered model the first time it is needed, then lazy-loads it on the first `read()` call.
-
-Install its inference dependencies first:
-
-```bash
-python -m pip install "textlens-ocr[inference]"
-```
+### Modern `OCR` API (Recommended)
 
 ```python
 from textlens import OCR
 
-ocr = OCR(model="glm-ocr")       # default model; downloads if missing
-text = ocr.read("invoice.png")
+# Initialize OCR client (auto-downloads model on first run)
+ocr = OCR(model="glm-ocr", device="cuda")
+
+# Extract text from image or PDF
+text = ocr.read("invoice.png", dpi=200)
 print(text)
 ```
 
-Use a different model or device:
+### Parallel BatchOCR & Dashboard API
 
 ```python
-ocr = OCR(model="smolvlm", device="cuda")
-text = ocr.read("scan.jpg", prompt="Read every visible word.", max_new_tokens=1024)
+from textlens.batch import BatchOCR, TaskStatus
+
+# Create BatchOCR instance
+batch = BatchOCR(
+    model="glm-ocr",
+    workers=2,
+    output_dir="./ocr_results",
+    output_format="json",
+    enable_dashboard=True,   # Launches live web dashboard at http://127.0.0.1:8765
+)
+
+# Run batch job
+tasks = batch.run("./documents_folder")
+
+for task in tasks:
+    if task.status == TaskStatus.COMPLETED:
+        print(f"✓ {task.source_path.name} -> {task.output_path}")
+    else:
+        print(f"✗ {task.source_path.name} -> Error: {task.error}")
 ```
 
-`OCR.read()` accepts a local image/PDF path, HTTP(S) URL, Pillow image, `bytes`, or `BytesIO`. PDFs return a single string with `--- Page N ---` separators.
-
-## Legacy SDK: richer GLM-OCR helpers
-
-`TextLens` remains supported for its GLM-OCR-specific helpers. Use `auto_load=False` when you want construction without immediately loading the model.
+### Legacy SDK Helpers (`TextLens`)
 
 ```python
 from textlens import TextLens
@@ -193,132 +157,41 @@ from textlens import TextLens
 engine = TextLens(auto_load=False)
 engine.load()
 
-print(engine.read("invoice.png"))
-print(engine.extract_table("table.png"))
-print(engine.extract_formula("equation.png"))
-print(engine.extract_json("receipt.jpg", schema='{"vendor": "str", "total": "float"}'))
-
-for page in engine.read_pdf("contract.pdf", max_pages=3):
-    print(page["page"], page["text"])
+# Structured extraction helpers
+print(engine.extract_table("financial_table.png"))
+print(engine.extract_formula("math_paper.png"))
+print(engine.extract_json("receipt.png", schema='{"store": "str", "total": "float"}'))
 ```
 
-## BatchOCR
+---
 
-`BatchOCR` scans a folder (or accepts a list of files), queues supported images/PDFs, retries failures, writes one output per document, and writes a `batch_manifest.json` summary. Supported inputs: PDF, PNG, JPG/JPEG, WEBP, BMP, TIFF/TIF.
+## 🌐 Local REST API Microservice
 
-```python
-from textlens.batch import BatchOCR, TaskStatus
-
-batch = BatchOCR(
-    model="glm-ocr",
-    workers=2,                  # start small: each worker can consume GPU memory
-    output_dir="./results",
-    output_format="json",      # json | markdown | csv | txt
-    retries=2,
-    enable_dashboard=False,
-)
-
-tasks = batch.run("./documents")
-for task in tasks:
-    if task.status is TaskStatus.COMPLETED:
-        print(task.source_path.name, task.output_path)
-    else:
-        print(task.source_path.name, task.error)
-```
-
-Set `enable_dashboard=True` to launch the local dashboard (default `http://127.0.0.1:8765`). On a GPU, do not increase `workers` blindly: parallel VLM inference can exhaust VRAM. Begin with one or two workers and increase only after checking `textlens doctor` and real memory use.
-
-```python
-# These controls can be called from another thread or your application UI.
-batch.pause()
-batch.resume()
-batch.cancel()
-batch.retry_failed()
-batch.reconfigure(workers=2, output_format="markdown", retries=3)
-```
-
-## Model management and hardware inspection
-
-```python
-from textlens import ModelManager
-from textlens.models import HardwareDoctor
-
-ModelManager.models()
-ModelManager.download("smolvlm")
-metadata = ModelManager.info("smolvlm")
-
-report = HardwareDoctor().run()
-HardwareDoctor().print_report(report)
-```
-
-## REST API
-
-Install the server extra before starting the API:
+Launch a local OCR microservice with built-in OpenAPI documentation:
 
 ```bash
-python -m pip install "textlens-ocr[server,inference]"
+textlens serve --host 127.0.0.1 --port 8000
 ```
 
-```python
-import textlens
+- **Swagger UI**: Interactive documentation at `http://127.0.0.1:8000/docs`
+- **Endpoints**:
+  - `GET /api/v1/health` — Service health & version
+  - `GET /api/v1/hardware` — GPU VRAM & system metrics
+  - `POST /api/v1/ocr` — Document upload OCR endpoint
 
-textlens.serve(host="127.0.0.1", port=8000)
-```
+---
 
-Open `http://127.0.0.1:8000/docs` for Swagger UI. Available endpoints include `GET /api/v1/health`, `GET /api/v1/hardware`, `POST /api/v1/ocr` (file upload or form path/URL), and `POST /api/v1/ocr/json-payload` (JSON URL/path).
+## 🧪 Testing & Verification
 
-## CLI
-
-```bash
-textlens models
-textlens discover                            # interactive model-name search
-textlens discover DeepSeek-OCR --compatible-only
-textlens discover --search "PaddleOCR-VL" --limit 10
-textlens discover GOT-OCR2_0 --include-unknown
-textlens discover --refresh                  # bypass the 15-minute cache
-textlens model install smolvlm
-textlens model info glm-ocr
-textlens model remove smolvlm
-textlens doctor
-textlens read document.png --device cuda
-textlens batch ./documents --model glm-ocr --workers 2 --format markdown --no-dashboard
-textlens serve --host 0.0.0.0 --port 8000
-```
-
-`textlens doctor` only analyses local hardware and recommends official
-TextLens catalog models. It does not search Hugging Face, so options such as
-`--include-unknown` apply to `textlens discover`, not Doctor.
-
-## Test before using a model
-
-The standard suite is offline and mocks downloads/model inference where appropriate:
+Run feature checks and test suites locally:
 
 ```bash
 python -m pytest tests -q
 python scripts/run_feature_checks.py
 ```
 
-For a real, local inference check after downloading a model, supply an image:
+---
 
-```bash
-python scripts/run_feature_checks.py --image ./test-image-ocr.png --model glm-ocr --device cuda
-```
-
-See [the API reference](docs/API_REFERENCE.md) for public classes, functions, parameters, return values, and the full test checklist.
-
-## Runnable examples
-
-The [examples](examples/README.md) directory contains separate scripts for environment setup, model management, image/PDF OCR, custom prompts, table/formula/JSON extraction, device switching, BatchOCR, and the REST API. Start with:
-
-```bash
-python examples/00_environment_check.py
-python examples/02_basic_ocr.py ./test-image-ocr.png --model smolvlm --device cuda
-```
-
-## Status and roadmap
-
-TextLens is an initial local-first release. NVIDIA CUDA is the recommended acceleration path today. CPU mode is a fallback, not the target for high-throughput OCR. Apple Silicon MPS support and strategies for optimising OCR workloads on Apple chips are planned future work; they should not yet be treated as production-ready support.
-
-## License
+## 📜 License
 
 MIT License © TextLens Contributors.

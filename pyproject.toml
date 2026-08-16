@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "textlens-ocr"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local, VLM-powered OCR for Python: images, PDFs, batch processing, CUDA diagnostics, and a REST API."
 readme = "README.md"
 authors = [
