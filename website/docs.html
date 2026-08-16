@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="description" content="TextLens Documentation — complete API reference, installation guides, BatchOCR, CLI, REST API, and CUDA setup instructions."/>
   <title>TextLens Documentation</title>
   <link rel="icon" type="image/png" href="assets/favicon.png?v=3"/>
@@ -11,115 +11,237 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="styles.css"/>
   <style>
-    html,body{background:#0d0f10;color:#e8ece9;font-family:'Manrope',sans-serif}
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      background: #0d0f10;
+      color: #e8ece9;
+      font-family: 'Manrope', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
 
     /* ── Doc header ───────────────────────────── */
-    .dochead{
-      display:flex;align-items:center;gap:14px;
-      padding:0 max(24px,calc((100vw - 1340px)/2));
-      height:64px;
-      border-bottom:1px solid #252d26;
-      background:#0d0f10;
-      position:sticky;top:0;z-index:100;
+    .dochead {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 max(24px, calc((100vw - 1340px) / 2));
+      height: 64px;
+      border-bottom: 1px solid #252d26;
+      background: #0d0f10;
+      position: sticky;
+      top: 0;
+      z-index: 200;
     }
-    .dochead-brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:#fff}
-    .dochead-logo{width:30px;height:30px;object-fit:contain}
-    .dochead-name{font-size:17px;font-weight:800;letter-spacing:-0.5px}
-    .dochead-sep{flex:1}
-    .dochead-github{
-      display:flex;align-items:center;gap:6px;color:#9da59f;
-      text-decoration:none;border:1px solid #2d3a2e;
-      border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;
-      transition:border-color .2s,color .2s;
+    .dochead-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: #fff; flex-shrink: 0; }
+    .dochead-logo { width: 30px; height: 30px; object-fit: contain; border-radius: 6px; }
+    .dochead-name { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; }
+    .dochead-sub { color: #9da59f; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .dochead-sep { flex: 1; }
+    .dochead-github {
+      display: flex; align-items: center; gap: 6px; color: #9da59f;
+      text-decoration: none; border: 1px solid #2d3a2e;
+      border-radius: 999px; padding: 7px 13px; font-size: 12px; font-weight: 700;
+      transition: border-color .2s, color .2s; white-space: nowrap; flex-shrink: 0;
     }
-    .dochead-github:hover{border-color:#70df7f;color:#70df7f}
-    .dochead-github svg{width:15px;height:15px;fill:currentColor}
-    .dochead-back{color:#9da59f;text-decoration:none;font-size:13px;font-weight:600}
-    .dochead-back:hover{color:#fff}
+    .dochead-github:hover { border-color: #70df7f; color: #70df7f; }
+    .dochead-github svg { width: 15px; height: 15px; fill: currentColor; }
+    .dochead-back { color: #9da59f; text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+    .dochead-back:hover { color: #fff; }
+
+    /* Mobile Menu Button */
+    .doc-menu-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      padding: 6px;
+      flex-direction: column;
+      gap: 5px;
+      margin-left: auto;
+      z-index: 210;
+    }
+    .doc-menu-btn span {
+      width: 22px;
+      height: 2px;
+      background: #70df7f;
+      border-radius: 2px;
+      transition: transform .25s, opacity .25s;
+    }
+
+    /* Mobile Drawer */
+    .doc-drawer {
+      display: none;
+      position: fixed;
+      top: 64px;
+      left: 0;
+      width: 100%;
+      height: calc(100vh - 64px);
+      background: #0a0d0a;
+      z-index: 190;
+      padding: 24px 20px 40px;
+      overflow-y: auto;
+      border-top: 1px solid #252d26;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .doc-drawer.is-open { display: flex; }
+    .doc-drawer-group { font-size: 10px; font-weight: 800; color: #70df7f; letter-spacing: 1.5px; margin: 16px 0 4px; text-transform: uppercase; }
+    .doc-drawer-group:first-child { margin-top: 0; }
+    .doc-drawer a {
+      color: #c8d4ca;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: #111712;
+      border: 1px solid #1e2a1f;
+      display: block;
+      transition: background .2s, color .2s;
+    }
+    .doc-drawer a:hover, .doc-drawer a:active { color: #70df7f; background: #162217; }
+    .doc-drawer-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #252d26; }
+    .doc-drawer-actions a { text-align: center; font-weight: 700; }
+
+    /* ── Mobile Quick Jump Bar ─────────────────── */
+    .mobile-quick-jump {
+      display: none;
+      background: #121813;
+      border: 1px solid #253326;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 28px;
+    }
+    .mobile-quick-jump summary {
+      font-size: 13px; font-weight: 700; color: #70df7f; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      outline: none; list-style: none;
+    }
+    .mobile-quick-jump summary::-webkit-details-marker { display: none; }
+    .mobile-quick-jump-links {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 12px;
+    }
+    .mobile-quick-jump-links a {
+      color: #b0bcb2; font-size: 12px; text-decoration: none; padding: 6px 8px;
+      background: #182219; border-radius: 6px; text-align: center;
+    }
 
     /* ── Layout ───────────────────────────────── */
-    .docgrid{
-      display:grid;
-      grid-template-columns:220px minmax(0,760px) 180px;
-      gap:55px;
-      max-width:1340px;margin:0 auto;padding:48px 24px;
+    .docgrid {
+      display: grid;
+      grid-template-columns: 220px minmax(0,760px) 180px;
+      gap: 55px;
+      max-width: 1340px; margin: 0 auto; padding: 48px 24px;
     }
 
-    /* ── Sidebar ──────────────────────────────── */
-    .side{position:sticky;top:80px;height:fit-content}
-    .side a,.toc a{
-      display:block;color:#9da59f;text-decoration:none;
-      padding:7px 0;font-size:13px;
-      transition:color .18s;
+    /* ── Sidebars ─────────────────────────────── */
+    .side { position: sticky; top: 84px; height: fit-content; }
+    .side a, .toc a {
+      display: block; color: #9da59f; text-decoration: none;
+      padding: 7px 0; font-size: 13px;
+      transition: color .18s;
     }
-    .side a:hover,.toc a:hover{color:#a0f1a7}
-    .side p,.toc p{font-size:10px;font-weight:800;color:#fff;letter-spacing:1px;margin:18px 0 6px}
-    .side a:first-of-type{margin-top:0}
+    .side a:hover, .toc a:hover { color: #a0f1a7; }
+    .side p, .toc p { font-size: 10px; font-weight: 800; color: #fff; letter-spacing: 1px; margin: 18px 0 6px; }
+    .side a:first-of-type { margin-top: 0; }
 
     /* ── Content ──────────────────────────────── */
-    .content section{padding-bottom:56px;border-bottom:1px solid #1c2320;margin-bottom:56px}
-    .content section:last-child{border-bottom:none}
-    .content h1{font-size:44px;letter-spacing:-2px;line-height:1.1;margin-bottom:20px}
-    .content h2{font-size:26px;letter-spacing:-0.8px;margin-top:0;margin-bottom:16px}
-    .content h3{font-size:17px;font-weight:700;margin:28px 0 8px;color:#c8d4ca}
-    .content p,.content li{color:#adb5af;line-height:1.85;font-size:15px}
-    .content ul{padding-left:20px}
-    .content li{margin-bottom:6px}
-    .content code{
-      font-family:'DM Mono',monospace;color:#a0f1a7;
-      background:#131b14;padding:2px 6px;border-radius:5px;font-size:13px;
+    .content { min-width: 0; }
+    .content section { padding-bottom: 52px; border-bottom: 1px solid #1c2320; margin-bottom: 52px; }
+    .content section:last-child { border-bottom: none; }
+    .content h1 { font-size: clamp(32px, 5vw, 44px); letter-spacing: -1.8px; line-height: 1.1; margin-bottom: 20px; color: #fff; }
+    .content h2 { font-size: clamp(22px, 4vw, 26px); letter-spacing: -0.8px; margin-top: 0; margin-bottom: 16px; color: #fff; }
+    .content h3 { font-size: 17px; font-weight: 700; margin: 28px 0 8px; color: #c8d4ca; }
+    .content p, .content li { color: #adb5af; line-height: 1.85; font-size: 15px; }
+    .content ul, .content ol { padding-left: 20px; }
+    .content li { margin-bottom: 6px; }
+    .content code {
+      font-family: 'DM Mono', monospace; color: #a0f1a7;
+      background: #131b14; padding: 2px 6px; border-radius: 5px; font-size: 13px;
+      word-break: break-word;
     }
-    .section-kicker{
-      font-size:10px;font-weight:800;letter-spacing:2px;color:#70df7f;
-      text-transform:uppercase;margin-bottom:10px;
+    .section-kicker {
+      font-size: 10px; font-weight: 800; letter-spacing: 2px; color: #70df7f;
+      text-transform: uppercase; margin-bottom: 10px;
     }
 
     /* ── Code blocks ──────────────────────────── */
-    .code-block{
-      background:#111812;border:1px solid #2a3a2c;
-      border-radius:12px;padding:20px 22px;
-      font-family:'DM Mono',monospace;font-size:13px;line-height:1.8;
-      color:#c8d4ca;white-space:pre;overflow-x:auto;
-      margin:16px 0;
+    .code-block {
+      background: #111812; border: 1px solid #2a3a2c;
+      border-radius: 12px; padding: 18px 20px;
+      font-family: 'DM Mono', monospace; font-size: 13px; line-height: 1.8;
+      color: #c8d4ca; white-space: pre-wrap; word-break: break-word;
+      overflow-x: auto; margin: 16px 0;
+      -webkit-overflow-scrolling: touch;
     }
-    .t-kw{color:#c792ea}.t-str{color:#a0f1a7}.t-cmt{color:#546f58}
-    .t-fn{color:#82aaff}.t-num{color:#f78c6c}.t-cls{color:#ffcb6b}
+    .t-kw { color: #c792ea; } .t-str { color: #a0f1a7; } .t-cmt { color: #546f58; }
+    .t-fn { color: #82aaff; } .t-num { color: #f78c6c; } .t-cls { color: #ffcb6b; }
 
     /* ── Note / warning boxes ─────────────────── */
-    .note{
-      background:#152018;border:1px solid #2e4f33;
-      padding:16px 20px;border-radius:12px;margin:20px 0;
+    .note {
+      background: #152018; border: 1px solid #2e4f33;
+      padding: 16px 20px; border-radius: 12px; margin: 20px 0;
     }
-    .note strong{color:#a0f1a7;display:block;margin-bottom:6px}
-    .note p{margin:0;font-size:14px}
-    .warn{background:#1e1508;border-color:#5a3f10}
-    .warn strong{color:#fbd38d}
+    .note strong { color: #a0f1a7; display: block; margin-bottom: 6px; }
+    .note p { margin: 0; font-size: 14px; }
+    .warn { background: #1e1508; border-color: #5a3f10; }
+    .warn strong { color: #fbd38d; }
 
-    /* ── Table ────────────────────────────────── */
-    .doc-table{width:100%;border-collapse:collapse;margin:20px 0}
-    .doc-table td,.doc-table th{
-      border:1px solid #2a3a2c;padding:11px 14px;
-      text-align:left;font-size:13px;color:#adb5af;
+    /* ── Table responsiveness ─────────────────── */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 20px 0;
+      border: 1px solid #2a3a2c;
+      border-radius: 12px;
+      background: #111812;
     }
-    .doc-table th{background:#151d16;color:#e8ece9;font-weight:700}
-    .doc-table td:first-child{font-family:'DM Mono',monospace;color:#a0f1a7}
-    .doc-table tr:hover td{background:#141b15}
+    .doc-table { width: 100%; border-collapse: collapse; min-width: 540px; }
+    .doc-table td, .doc-table th {
+      border: 1px solid #2a3a2c; padding: 11px 14px;
+      text-align: left; font-size: 13px; color: #adb5af;
+    }
+    .doc-table th { background: #151d16; color: #e8ece9; font-weight: 700; }
+    .doc-table td:first-child { font-family: 'DM Mono', monospace; color: #a0f1a7; }
+    .doc-table tr:hover td { background: #141b15; }
 
     /* ── Badges ───────────────────────────────── */
-    .badge{
-      display:inline-block;padding:2px 8px;border-radius:999px;
-      font-size:11px;font-weight:700;margin-left:6px;
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700; margin-left: 6px;
     }
-    .badge-default{background:rgba(112,223,127,0.15);color:#70df7f;border:1px solid rgba(112,223,127,0.3)}
-    .badge-cuda{background:rgba(99,179,237,0.15);color:#63b3ed;border:1px solid rgba(99,179,237,0.3)}
+    .badge-default { background: rgba(112,223,127,0.15); color: #70df7f; border: 1px solid rgba(112,223,127,0.3); }
+    .badge-cuda { background: rgba(99,179,237,0.15); color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
 
     /* ── TOC ──────────────────────────────────── */
-    .toc{position:sticky;top:80px;height:fit-content}
+    .toc { position: sticky; top: 84px; height: fit-content; }
 
-    @media(max-width:900px){
-      .docgrid{display:block;padding:28px 16px}
-      .side,.toc{display:none}
-      .content h1{font-size:34px}
+    /* ── Doc Footer ───────────────────────────── */
+    .doc-footer {
+      border-top: 1px solid #1c2320;
+      padding: 32px 0 24px;
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #7a8a7d;
+      font-size: 12px;
+    }
+    .doc-footer a { color: #70df7f; text-decoration: none; }
+
+    /* ── Media Queries ────────────────────────── */
+    @media (max-width: 960px) {
+      .docgrid { display: block; padding: 24px 16px; }
+      .side, .toc { display: none; }
+      .mobile-quick-jump { display: block; }
+      .dochead-back, .dochead-github, .dochead-sub { display: none; }
+      .doc-menu-btn { display: flex; }
+      .dochead { padding: 0 16px; }
+      .code-block { font-size: 12px; padding: 14px 16px; }
+      .doc-footer { flex-direction: column; gap: 12px; text-align: center; }
     }
   </style>
 </head>
@@ -131,15 +253,47 @@
     <img class="dochead-logo" src="assets/logo.png?v=3" alt="TextLens logo"/>
     <span class="dochead-name">TextLens</span>
   </a>
-  <span style="color:#2d3a2e;font-size:18px;margin:0 4px">/</span>
-  <span style="color:#9da59f;font-size:13px;font-weight:600">Documentation</span>
+  <div class="dochead-sub">
+    <span style="color:#2d3a2e;font-size:18px">/</span>
+    <span>Documentation</span>
+  </div>
   <div class="dochead-sep"></div>
   <a class="dochead-back" href="index.html">&larr; Back to home</a>
   <a class="dochead-github" href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noreferrer">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.2-3.37-1.2-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1.01.07 1.54 1.06 1.54 1.06.9 1.57 2.35 1.12 2.92.85.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.05A9.28 9.28 0 0 1 12 6.9c.85 0 1.71.12 2.51.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.93.68 1.88 0 1.36-.01 2.45-.01 2.78 0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg>
     Star on GitHub
   </a>
+  <button class="doc-menu-btn" aria-label="Toggle navigation menu" id="docMenuBtn">
+    <span></span><span></span><span></span>
+  </button>
 </header>
+
+<!-- Mobile Navigation Drawer -->
+<nav class="doc-drawer" id="docDrawer">
+  <div class="doc-drawer-group">GET STARTED</div>
+  <a href="#what">What is TextLens?</a>
+  <a href="#problem">The problem solved</a>
+  <a href="#install">Installation</a>
+  <a href="#cuda">CUDA setup</a>
+
+  <div class="doc-drawer-group">WORKFLOWS</div>
+  <a href="#ocr">Basic OCR</a>
+  <a href="#pdf">PDF processing</a>
+  <a href="#batch">BatchOCR</a>
+  <a href="#doctor">Doctor</a>
+  <a href="#discover">Model discovery</a>
+  <a href="#server">REST API</a>
+
+  <div class="doc-drawer-group">REFERENCE</div>
+  <a href="#cli">CLI reference</a>
+  <a href="#models">Supported models</a>
+  <a href="#faq">FAQ</a>
+
+  <div class="doc-drawer-actions">
+    <a href="index.html" style="background:#70df7f;color:#0a0d0a">&larr; Back to Home</a>
+    <a href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noreferrer">Star on GitHub</a>
+  </div>
+</nav>
 
 <div class="docgrid">
 
@@ -166,6 +320,25 @@
 
   <!-- ── Main content ──────────────────────────── -->
   <main class="content">
+
+    <!-- Mobile Quick Jump Bar -->
+    <details class="mobile-quick-jump">
+      <summary>Quick Section Jump <span>&darr;</span></summary>
+      <div class="mobile-quick-jump-links">
+        <a href="#what">Overview</a>
+        <a href="#install">Install</a>
+        <a href="#cuda">CUDA</a>
+        <a href="#ocr">OCR</a>
+        <a href="#pdf">PDFs</a>
+        <a href="#batch">BatchOCR</a>
+        <a href="#doctor">Doctor</a>
+        <a href="#discover">Discover</a>
+        <a href="#server">REST API</a>
+        <a href="#cli">CLI</a>
+        <a href="#models">Models</a>
+        <a href="#faq">FAQ</a>
+      </div>
+    </details>
 
     <section id="what">
       <p class="section-kicker">GET STARTED</p>
@@ -250,12 +423,14 @@ text = ocr.read(<span class="t-str">"https://example.com/scan.png"</span>)
 ocr = OCR(model=<span class="t-str">"glm-ocr"</span>, device=<span class="t-str">"cuda"</span>)</div>
 
       <h3>OCR() parameters</h3>
-      <table class="doc-table">
-        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
-        <tr><td>model</td><td>str</td><td>"glm-ocr"</td><td>Model ID from the TextLens catalog</td></tr>
-        <tr><td>device</td><td>str</td><td>None (auto)</td><td>Force "cuda" or "cpu"</td></tr>
-        <tr><td>max_new_tokens</td><td>int</td><td>2048</td><td>Max tokens generated per page</td></tr>
-      </table>
+      <div class="table-wrapper">
+        <table class="doc-table">
+          <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          <tr><td>model</td><td>str</td><td>"glm-ocr"</td><td>Model ID from the TextLens catalog</td></tr>
+          <tr><td>device</td><td>str</td><td>None (auto)</td><td>Force "cuda" or "cpu"</td></tr>
+          <tr><td>max_new_tokens</td><td>int</td><td>2048</td><td>Max tokens generated per page</td></tr>
+        </table>
+      </div>
     </section>
 
     <section id="pdf">
@@ -297,23 +472,24 @@ batch = BatchOCR(
     enable_dashboard=<span class="t-kw">True</span>,   <span class="t-cmt"># http://localhost:8765</span>
 )
 
-results = batch.run(<span class="t-str">"./documents"</span>)</code></pre>
-</div>
+results = batch.run(<span class="t-str">"./documents"</span>)</div>
 
       <h3>BatchOCR parameters</h3>
-      <table class="doc-table">
-        <tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
-        <tr><td>model</td><td>"glm-ocr"</td><td>Model ID to use for OCR</td></tr>
-        <tr><td>workers</td><td>4</td><td>Parallel worker threads</td></tr>
-        <tr><td>output_format</td><td>"json"</td><td>json | markdown | csv | txt</td></tr>
-        <tr><td>output_dir</td><td>"./batch_output"</td><td>Directory to save results</td></tr>
-        <tr><td>retries</td><td>2</td><td>Retry limit per failed file</td></tr>
-        <tr><td>dpi</td><td>200</td><td>PDF render resolution</td></tr>
-        <tr><td>device</td><td>None (auto)</td><td>Force "cuda" or "cpu"</td></tr>
-        <tr><td>enable_dashboard</td><td>True</td><td>Launch live monitoring dashboard</td></tr>
-        <tr><td>dashboard_port</td><td>8765</td><td>Dashboard HTTP port</td></tr>
-        <tr><td>recursive</td><td>True</td><td>Scan subdirectories</td></tr>
-      </table>
+      <div class="table-wrapper">
+        <table class="doc-table">
+          <tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+          <tr><td>model</td><td>"glm-ocr"</td><td>Model ID to use for OCR</td></tr>
+          <tr><td>workers</td><td>4</td><td>Parallel worker threads</td></tr>
+          <tr><td>output_format</td><td>"json"</td><td>json | markdown | csv | txt</td></tr>
+          <tr><td>output_dir</td><td>"./batch_output"</td><td>Directory to save results</td></tr>
+          <tr><td>retries</td><td>2</td><td>Retry limit per failed file</td></tr>
+          <tr><td>dpi</td><td>200</td><td>PDF render resolution</td></tr>
+          <tr><td>device</td><td>None (auto)</td><td>Force "cuda" or "cpu"</td></tr>
+          <tr><td>enable_dashboard</td><td>True</td><td>Launch live monitoring dashboard</td></tr>
+          <tr><td>dashboard_port</td><td>8765</td><td>Dashboard HTTP port</td></tr>
+          <tr><td>recursive</td><td>True</td><td>Scan subdirectories</td></tr>
+        </table>
+      </div>
 
       <h3>Job controls</h3>
       <div class="code-block"><span class="t-cmt"># Available while a batch job is running</span>
@@ -413,18 +589,20 @@ curl -X POST "http://localhost:8000/api/v1/ocr" \
     <section id="cli">
       <h2>CLI reference</h2>
       <p>All commands are available as <code>textlens &lt;command&gt;</code> after installation.</p>
-      <table class="doc-table">
-        <tr><th>Command</th><th>Description</th></tr>
-        <tr><td>textlens models</td><td>List the official TextLens model catalog with VRAM and install status</td></tr>
-        <tr><td>textlens model install &lt;id&gt;</td><td>Download and cache a model from Hugging Face</td></tr>
-        <tr><td>textlens model remove &lt;id&gt;</td><td>Delete a cached model from disk</td></tr>
-        <tr><td>textlens model info &lt;id&gt;</td><td>Show model metadata, disk usage, and hardware requirements</td></tr>
-        <tr><td>textlens doctor</td><td>Inspect GPU, CUDA, VRAM, PyTorch, and get model recommendations</td></tr>
-        <tr><td>textlens discover [name]</td><td>Search Hugging Face live for OCR/VLM models by name</td></tr>
-        <tr><td>textlens read &lt;file&gt;</td><td>Run OCR on an image, PDF, or URL and print the result</td></tr>
-        <tr><td>textlens batch &lt;dir&gt;</td><td>Batch process a folder with parallel workers and live dashboard</td></tr>
-        <tr><td>textlens serve</td><td>Launch the OCR REST API at localhost:8000</td></tr>
-      </table>
+      <div class="table-wrapper">
+        <table class="doc-table">
+          <tr><th>Command</th><th>Description</th></tr>
+          <tr><td>textlens models</td><td>List the official TextLens model catalog with VRAM and install status</td></tr>
+          <tr><td>textlens model install &lt;id&gt;</td><td>Download and cache a model from Hugging Face</td></tr>
+          <tr><td>textlens model remove &lt;id&gt;</td><td>Delete a cached model from disk</td></tr>
+          <tr><td>textlens model info &lt;id&gt;</td><td>Show model metadata, disk usage, and hardware requirements</td></tr>
+          <tr><td>textlens doctor</td><td>Inspect GPU, CUDA, VRAM, PyTorch, and get model recommendations</td></tr>
+          <tr><td>textlens discover [name]</td><td>Search Hugging Face live for OCR/VLM models by name</td></tr>
+          <tr><td>textlens read &lt;file&gt;</td><td>Run OCR on an image, PDF, or URL and print the result</td></tr>
+          <tr><td>textlens batch &lt;dir&gt;</td><td>Batch process a folder with parallel workers and live dashboard</td></tr>
+          <tr><td>textlens serve</td><td>Launch the OCR REST API at localhost:8000</td></tr>
+        </table>
+      </div>
 
       <h3>batch flags</h3>
       <div class="code-block">textlens batch ./documents \
@@ -445,29 +623,31 @@ curl -X POST "http://localhost:8000/api/v1/ocr" \
         <strong>VLM-powered — NVIDIA CUDA GPU required</strong>
         <p>All supported models are vision-language models. A CUDA-capable NVIDIA GPU is strongly recommended. CPU fallback is available but significantly slower.</p>
       </div>
-      <table class="doc-table">
-        <tr><th>Model ID</th><th>Hugging Face Repo</th><th>Parameters</th><th>Min VRAM</th><th>Best for</th></tr>
-        <tr>
-          <td>glm-ocr <span class="badge badge-default">Default</span></td>
-          <td>zai-org/GLM-OCR</td><td>0.9B</td><td>6 GB</td>
-          <td>General OCR, invoices, receipts, tables</td>
-        </tr>
-        <tr>
-          <td>lighton-ocr</td>
-          <td>lightonai/LightOnOCR-2-1B</td><td>1B</td><td>8 GB</td>
-          <td>Scientific documents, academic papers</td>
-        </tr>
-        <tr>
-          <td>hunyuan-ocr</td>
-          <td>tencent/HunyuanOCR</td><td>~1B</td><td>8 GB</td>
-          <td>Enterprise documents, charts, layouts</td>
-        </tr>
-        <tr>
-          <td>smolvlm</td>
-          <td>HuggingFaceTB/SmolVLM-256M-Instruct</td><td>256M</td><td>2 GB</td>
-          <td>Low-VRAM devices, quick prototyping</td>
-        </tr>
-      </table>
+      <div class="table-wrapper">
+        <table class="doc-table">
+          <tr><th>Model ID</th><th>Hugging Face Repo</th><th>Parameters</th><th>Min VRAM</th><th>Best for</th></tr>
+          <tr>
+            <td>glm-ocr <span class="badge badge-default">Default</span></td>
+            <td>zai-org/GLM-OCR</td><td>0.9B</td><td>6 GB</td>
+            <td>General OCR, invoices, receipts, tables</td>
+          </tr>
+          <tr>
+            <td>lighton-ocr</td>
+            <td>lightonai/LightOnOCR-2-1B</td><td>1B</td><td>8 GB</td>
+            <td>Scientific documents, academic papers</td>
+          </tr>
+          <tr>
+            <td>hunyuan-ocr</td>
+            <td>tencent/HunyuanOCR</td><td>~1B</td><td>8 GB</td>
+            <td>Enterprise documents, charts, layouts</td>
+          </tr>
+          <tr>
+            <td>smolvlm</td>
+            <td>HuggingFaceTB/SmolVLM-256M-Instruct</td><td>256M</td><td>2 GB</td>
+            <td>Low-VRAM devices, quick prototyping</td>
+          </tr>
+        </table>
+      </div>
 
       <p>Use <code>textlens models</code> to see which models are installed on your system.</p>
     </section>
@@ -491,6 +671,11 @@ curl -X POST "http://localhost:8000/api/v1/ocr" \
       <p><code>smolvlm</code> is the fastest and uses the least VRAM (256M parameters, 2 GB). For accuracy-critical workloads, <code>glm-ocr</code> is the recommended default.</p>
     </section>
 
+    <footer class="doc-footer">
+      <span>&copy; 2026 TextLens Documentation. MIT Licensed.</span>
+      <a href="index.html">&larr; Back to TextLens Home</a>
+    </footer>
+
   </main>
 
   <!-- ── Right TOC ──────────────────────────────── -->
@@ -512,5 +697,24 @@ curl -X POST "http://localhost:8000/api/v1/ocr" \
   </aside>
 
 </div>
+
+<script>
+  // Mobile Navigation Drawer Toggle
+  const menuBtn = document.getElementById('docMenuBtn');
+  const drawer = document.getElementById('docDrawer');
+
+  if (menuBtn && drawer) {
+    menuBtn.addEventListener('click', () => {
+      const open = drawer.classList.toggle('is-open');
+      menuBtn.setAttribute('aria-expanded', String(open));
+    });
+
+    drawer.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        drawer.classList.remove('is-open');
+      });
+    });
+  }
+</script>
 </body>
 </html>
