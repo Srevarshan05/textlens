@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="description" content="TextLens Documentation — complete API reference, installation guides, BatchOCR, CLI, REST API, and CUDA setup instructions."/>
+  <title>TextLens Documentation</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png?v=3"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    html,body{background:#0d0f10;color:#e8ece9;font-family:'Manrope',sans-serif}
+
+    /* ── Doc header ───────────────────────────── */
+    .dochead{
+      display:flex;align-items:center;gap:14px;
+      padding:0 max(24px,calc((100vw - 1340px)/2));
+      height:64px;
+      border-bottom:1px solid #252d26;
+      background:#0d0f10;
+      position:sticky;top:0;z-index:100;
+    }
+    .dochead-brand{display:flex;align-items:center;gap:9px;text-decoration:none;color:#fff}
+    .dochead-logo{width:30px;height:30px;object-fit:contain}
+    .dochead-name{font-size:17px;font-weight:800;letter-spacing:-0.5px}
+    .dochead-sep{flex:1}
+    .dochead-github{
+      display:flex;align-items:center;gap:6px;color:#9da59f;
+      text-decoration:none;border:1px solid #2d3a2e;
+      border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;
+      transition:border-color .2s,color .2s;
+    }
+    .dochead-github:hover{border-color:#70df7f;color:#70df7f}
+    .dochead-github svg{width:15px;height:15px;fill:currentColor}
+    .dochead-back{color:#9da59f;text-decoration:none;font-size:13px;font-weight:600}
+    .dochead-back:hover{color:#fff}
+
+    /* ── Layout ───────────────────────────────── */
+    .docgrid{
+      display:grid;
+      grid-template-columns:220px minmax(0,760px) 180px;
+      gap:55px;
+      max-width:1340px;margin:0 auto;padding:48px 24px;
+    }
+
+    /* ── Sidebar ──────────────────────────────── */
+    .side{position:sticky;top:80px;height:fit-content}
+    .side a,.toc a{
+      display:block;color:#9da59f;text-decoration:none;
+      padding:7px 0;font-size:13px;
+      transition:color .18s;
+    }
+    .side a:hover,.toc a:hover{color:#a0f1a7}
+    .side p,.toc p{font-size:10px;font-weight:800;color:#fff;letter-spacing:1px;margin:18px 0 6px}
+    .side a:first-of-type{margin-top:0}
+
+    /* ── Content ──────────────────────────────── */
+    .content section{padding-bottom:56px;border-bottom:1px solid #1c2320;margin-bottom:56px}
+    .content section:last-child{border-bottom:none}
+    .content h1{font-size:44px;letter-spacing:-2px;line-height:1.1;margin-bottom:20px}
+    .content h2{font-size:26px;letter-spacing:-0.8px;margin-top:0;margin-bottom:16px}
+    .content h3{font-size:17px;font-weight:700;margin:28px 0 8px;color:#c8d4ca}
+    .content p,.content li{color:#adb5af;line-height:1.85;font-size:15px}
+    .content ul{padding-left:20px}
+    .content li{margin-bottom:6px}
+    .content code{
+      font-family:'DM Mono',monospace;color:#a0f1a7;
+      background:#131b14;padding:2px 6px;border-radius:5px;font-size:13px;
+    }
+    .section-kicker{
+      font-size:10px;font-weight:800;letter-spacing:2px;color:#70df7f;
+      text-transform:uppercase;margin-bottom:10px;
+    }
+
+    /* ── Code blocks ──────────────────────────── */
+    .code-block{
+      background:#111812;border:1px solid #2a3a2c;
+      border-radius:12px;padding:20px 22px;
+      font-family:'DM Mono',monospace;font-size:13px;line-height:1.8;
+      color:#c8d4ca;white-space:pre;overflow-x:auto;
+      margin:16px 0;
+    }
+    .t-kw{color:#c792ea}.t-str{color:#a0f1a7}.t-cmt{color:#546f58}
+    .t-fn{color:#82aaff}.t-num{color:#f78c6c}.t-cls{color:#ffcb6b}
+
+    /* ── Note / warning boxes ─────────────────── */
+    .note{
+      background:#152018;border:1px solid #2e4f33;
+      padding:16px 20px;border-radius:12px;margin:20px 0;
+    }
+    .note strong{color:#a0f1a7;display:block;margin-bottom:6px}
+    .note p{margin:0;font-size:14px}
+    .warn{background:#1e1508;border-color:#5a3f10}
+    .warn strong{color:#fbd38d}
+
+    /* ── Table ────────────────────────────────── */
+    .doc-table{width:100%;border-collapse:collapse;margin:20px 0}
+    .doc-table td,.doc-table th{
+      border:1px solid #2a3a2c;padding:11px 14px;
+      text-align:left;font-size:13px;color:#adb5af;
+    }
+    .doc-table th{background:#151d16;color:#e8ece9;font-weight:700}
+    .doc-table td:first-child{font-family:'DM Mono',monospace;color:#a0f1a7}
+    .doc-table tr:hover td{background:#141b15}
+
+    /* ── Badges ───────────────────────────────── */
+    .badge{
+      display:inline-block;padding:2px 8px;border-radius:999px;
+      font-size:11px;font-weight:700;margin-left:6px;
+    }
+    .badge-default{background:rgba(112,223,127,0.15);color:#70df7f;border:1px solid rgba(112,223,127,0.3)}
+    .badge-cuda{background:rgba(99,179,237,0.15);color:#63b3ed;border:1px solid rgba(99,179,237,0.3)}
+
+    /* ── TOC ──────────────────────────────────── */
+    .toc{position:sticky;top:80px;height:fit-content}
+
+    @media(max-width:900px){
+      .docgrid{display:block;padding:28px 16px}
+      .side,.toc{display:none}
+      .content h1{font-size:34px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────── -->
+<header class="dochead">
+  <a class="dochead-brand" href="index.html">
+    <img class="dochead-logo" src="assets/logo.png?v=3" alt="TextLens logo"/>
+    <span class="dochead-name">TextLens</span>
+  </a>
+  <span style="color:#2d3a2e;font-size:18px;margin:0 4px">/</span>
+  <span style="color:#9da59f;font-size:13px;font-weight:600">Documentation</span>
+  <div class="dochead-sep"></div>
+  <a class="dochead-back" href="index.html">&larr; Back to home</a>
+  <a class="dochead-github" href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noreferrer">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.2-3.37-1.2-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1.01.07 1.54 1.06 1.54 1.06.9 1.57 2.35 1.12 2.92.85.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.05A9.28 9.28 0 0 1 12 6.9c.85 0 1.71.12 2.51.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.93.68 1.88 0 1.36-.01 2.45-.01 2.78 0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg>
+    Star on GitHub
+  </a>
+</header>
+
+<div class="docgrid">
+
+  <!-- ── Left sidebar ──────────────────────────── -->
+  <aside class="side">
+    <p>GET STARTED</p>
+    <a href="#what">What is TextLens?</a>
+    <a href="#problem">The problem solved</a>
+    <a href="#install">Installation</a>
+    <a href="#cuda">CUDA setup</a>
+    <p>WORKFLOWS</p>
+    <a href="#ocr">Basic OCR</a>
+    <a href="#pdf">PDF processing</a>
+    <a href="#batch">BatchOCR</a>
+    <a href="#doctor">Doctor</a>
+    <a href="#discover">Model discovery</a>
+    <a href="#server">REST API</a>
+    <p>CLI REFERENCE</p>
+    <a href="#cli">All commands</a>
+    <p>REFERENCE</p>
+    <a href="#models">Supported models</a>
+    <a href="#faq">FAQ</a>
+  </aside>
+
+  <!-- ── Main content ──────────────────────────── -->
+  <main class="content">
+
+    <section id="what">
+      <p class="section-kicker">GET STARTED</p>
+      <h1>What is TextLens?</h1>
+      <p>TextLens is a local, VLM-powered OCR framework for Python. It turns images and PDFs into useful text while keeping model selection, CUDA checks, batch processing, and local serving in one reusable developer workflow.</p>
+      <div class="note">
+        <strong>Local by design</strong>
+        <p>Your files stay on your computer. Most supported engines are vision-language models (VLMs), so an NVIDIA CUDA GPU is strongly recommended for practical performance.</p>
+      </div>
+      <div class="note warn">
+        <strong>Apple Silicon / MPS</strong>
+        <p>MPS acceleration is on the roadmap. Initial support for Apple Silicon chips is in active development and will be released as a future update.</p>
+      </div>
+    </section>
+
+    <section id="problem">
+      <h2>The problem we solved</h2>
+      <p>Developers repeatedly rebuild the same OCR setup: choose a model, load images, render PDFs, check GPU VRAM, manage folders, handle retries, export results, and expose an API.</p>
+      <p>TextLens makes those pieces reusable through a clear Python API so you write it once and move on.</p>
+      <ul>
+        <li>One input layer for images, PDFs, URLs, bytes, and Pillow images</li>
+        <li>One catalog with model, parameter, and VRAM guidance</li>
+        <li>One BatchOCR workflow for folder-scale processing with a live dashboard</li>
+        <li>One local REST API with auto-generated Swagger documentation</li>
+        <li>One CLI to check hardware, manage models, and run inference</li>
+      </ul>
+    </section>
+
+    <section id="install">
+      <h2>Installation</h2>
+      <p>TextLens uses optional dependency groups. Install only what your use case needs:</p>
+
+      <h3>Inference only (OCR + BatchOCR)</h3>
+      <div class="code-block">pip install "textlens-srevarshan[inference,ui]"</div>
+
+      <h3>Inference + REST API server</h3>
+      <div class="code-block">pip install "textlens-srevarshan[inference,ui,server]"</div>
+
+      <h3>Live model discovery from Hugging Face</h3>
+      <div class="code-block">pip install "textlens-srevarshan[inference,ui,catalog]"</div>
+
+      <h3>Everything</h3>
+      <div class="code-block">pip install "textlens-srevarshan[all]"</div>
+
+      <h3>From source</h3>
+      <div class="code-block">git clone https://github.com/Srevarshan05/textlens.git
+cd textlens
+pip install -e ".[inference,ui,server,catalog]"</div>
+    </section>
+
+    <section id="cuda">
+      <h2>NVIDIA CUDA setup</h2>
+      <p>TextLens VLMs require CUDA for practical performance. Complete these steps once per machine:</p>
+      <ol style="color:#adb5af;line-height:2;padding-left:20px">
+        <li>Install the latest NVIDIA GPU driver for your card (RTX 30xx/40xx/50xx series).</li>
+        <li>Verify the driver: <code>nvidia-smi</code> — note the CUDA version shown in the top-right corner.</li>
+        <li>Install the matching PyTorch CUDA wheel from <a href="https://pytorch.org/get-started/locally/" style="color:#70df7f" target="_blank" rel="noreferrer">pytorch.org/get-started/locally</a></li>
+        <li>Run <code>textlens doctor</code> to confirm the full stack is detected correctly.</li>
+      </ol>
+      <div class="note">
+        <strong>You do not need the full CUDA Toolkit</strong>
+        <p>The PyTorch CUDA wheel includes the required runtime libraries. Only the NVIDIA GPU driver is a system-level requirement.</p>
+      </div>
+    </section>
+
+    <section id="ocr">
+      <h2>Basic OCR</h2>
+      <p>The <code>OCR</code> class is the main entry point. It auto-detects CUDA and loads the selected model on first use.</p>
+      <div class="code-block"><span class="t-kw">from</span> textlens <span class="t-kw">import</span> OCR
+
+<span class="t-cmt"># Auto-detects CUDA</span>
+ocr = OCR(model=<span class="t-str">"glm-ocr"</span>)
+
+<span class="t-cmt"># Read an image</span>
+text = ocr.read(<span class="t-str">"invoice.png"</span>)
+print(text)
+
+<span class="t-cmt"># Read from URL</span>
+text = ocr.read(<span class="t-str">"https://example.com/scan.png"</span>)
+
+<span class="t-cmt"># Force a specific device</span>
+ocr = OCR(model=<span class="t-str">"glm-ocr"</span>, device=<span class="t-str">"cuda"</span>)</div>
+
+      <h3>OCR() parameters</h3>
+      <table class="doc-table">
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+        <tr><td>model</td><td>str</td><td>"glm-ocr"</td><td>Model ID from the TextLens catalog</td></tr>
+        <tr><td>device</td><td>str</td><td>None (auto)</td><td>Force "cuda" or "cpu"</td></tr>
+        <tr><td>max_new_tokens</td><td>int</td><td>2048</td><td>Max tokens generated per page</td></tr>
+      </table>
+    </section>
+
+    <section id="pdf">
+      <h2>PDF processing</h2>
+      <p>Every backend supports PDF input natively through the unified <code>load_input_images</code> utility.</p>
+      <div class="code-block"><span class="t-kw">from</span> textlens <span class="t-kw">import</span> OCR
+
+ocr = OCR(model=<span class="t-str">"glm-ocr"</span>)
+
+<span class="t-cmt"># All pages</span>
+text = ocr.read(<span class="t-str">"report.pdf"</span>)
+
+<span class="t-cmt"># Specific page (1-indexed)</span>
+text = ocr.read(<span class="t-str">"report.pdf"</span>, page=<span class="t-num">1</span>)
+
+<span class="t-cmt"># Multiple pages, custom DPI</span>
+text = ocr.read(<span class="t-str">"report.pdf"</span>, page=[<span class="t-num">1</span>, <span class="t-num">2</span>, <span class="t-num">3</span>], dpi=<span class="t-num">300</span>)</div>
+
+      <p>Multi-page output is formatted as:</p>
+      <div class="code-block">--- Page 1 ---
+extracted text from page one...
+
+--- Page 2 ---
+extracted text from page two...</div>
+    </section>
+
+    <section id="batch">
+      <h2>BatchOCR</h2>
+      <p>Process an entire folder of PDFs and images in parallel. TextLens handles queuing, workers, retries, structured exports, and a live monitoring dashboard at <code>http://localhost:8765</code>.</p>
+
+      <div class="code-block"><span class="t-kw">from</span> textlens.batch <span class="t-kw">import</span> BatchOCR
+
+batch = BatchOCR(
+    model=<span class="t-str">"glm-ocr"</span>,
+    workers=<span class="t-num">1</span>,              <span class="t-cmt"># 1 worker per GPU to avoid VRAM duplication</span>
+    output_format=<span class="t-str">"json"</span>,    <span class="t-cmt"># json | markdown | csv | txt</span>
+    output_dir=<span class="t-str">"./results"</span>,
+    retries=<span class="t-num">2</span>,
+    enable_dashboard=<span class="t-kw">True</span>,   <span class="t-cmt"># http://localhost:8765</span>
+)
+
+results = batch.run(<span class="t-str">"./documents"</span>)</code></pre>
+</div>
+
+      <h3>BatchOCR parameters</h3>
+      <table class="doc-table">
+        <tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+        <tr><td>model</td><td>"glm-ocr"</td><td>Model ID to use for OCR</td></tr>
+        <tr><td>workers</td><td>4</td><td>Parallel worker threads</td></tr>
+        <tr><td>output_format</td><td>"json"</td><td>json | markdown | csv | txt</td></tr>
+        <tr><td>output_dir</td><td>"./batch_output"</td><td>Directory to save results</td></tr>
+        <tr><td>retries</td><td>2</td><td>Retry limit per failed file</td></tr>
+        <tr><td>dpi</td><td>200</td><td>PDF render resolution</td></tr>
+        <tr><td>device</td><td>None (auto)</td><td>Force "cuda" or "cpu"</td></tr>
+        <tr><td>enable_dashboard</td><td>True</td><td>Launch live monitoring dashboard</td></tr>
+        <tr><td>dashboard_port</td><td>8765</td><td>Dashboard HTTP port</td></tr>
+        <tr><td>recursive</td><td>True</td><td>Scan subdirectories</td></tr>
+      </table>
+
+      <h3>Job controls</h3>
+      <div class="code-block"><span class="t-cmt"># Available while a batch job is running</span>
+batch.pause()          <span class="t-cmt"># In-flight tasks finish, new ones wait</span>
+batch.resume()         <span class="t-cmt"># Resume from paused state</span>
+batch.cancel()         <span class="t-cmt"># Stop workers after current task</span>
+batch.retry_failed()   <span class="t-cmt"># Re-queue all permanently failed files</span>
+
+<span class="t-cmt"># Runtime reconfiguration — no restart needed</span>
+batch.reconfigure(workers=<span class="t-num">2</span>)
+batch.reconfigure(output_format=<span class="t-str">"markdown"</span>)</div>
+
+      <h3>Callbacks</h3>
+      <div class="code-block"><span class="t-kw">def</span> <span class="t-fn">on_done</span>(task):
+    print(<span class="t-str">f"Done: {task.source_path.name} — {task.duration_sec:.2f}s"</span>)
+
+<span class="t-kw">def</span> <span class="t-fn">on_fail</span>(task):
+    print(<span class="t-str">f"Failed: {task.source_path.name} — {task.error}"</span>)
+
+results = batch.run(<span class="t-str">"./docs"</span>,
+    on_file_complete=on_done,
+    on_file_failed=on_fail,
+)</div>
+
+      <div class="note">
+        <strong>GPU VRAM tip</strong>
+        <p>Use <code>workers=1</code> on a single GPU. Each worker loads a full copy of the model — two workers on a 6 GB GPU will likely cause an out-of-memory error.</p>
+      </div>
+    </section>
+
+    <section id="doctor">
+      <h2>TextLens Doctor</h2>
+      <p>Run <code>textlens doctor</code> before downloading any model. It checks CUDA availability, GPU model, VRAM, PyTorch installation, CPU, RAM, and recommends which TextLens models are compatible with your machine.</p>
+      <div class="code-block">$ textlens doctor
+
+  GPU    NVIDIA GeForce RTX 4050 Laptop GPU
+  VRAM   6.0 GB  ✓ Available
+  CUDA   ✓ PyTorch CUDA enabled
+  RAM    16 GB
+
+  Model recommendations:
+    ✓  glm-ocr    — compatible (needs 6 GB)
+    !  lighton-ocr — needs 8 GB VRAM
+    !  hunyuan-ocr — needs 8 GB VRAM
+    ✓  smolvlm    — compatible (needs 2 GB)</div>
+
+      <div class="code-block"><span class="t-cmt"># Python API equivalent</span>
+<span class="t-kw">import</span> textlens
+
+info = textlens.get_hardware_info()
+print(info.gpu_name, info.vram_gb)</div>
+    </section>
+
+    <section id="discover">
+      <h2>Live model discovery</h2>
+      <p>Requires the <code>catalog</code> extra. Searches Hugging Face by model name and compares published parameter counts and VRAM requirements against your detected hardware.</p>
+      <div class="code-block"><span class="t-cmt"># Interactive search (prompts for model name)</span>
+$ textlens discover
+
+<span class="t-cmt"># Direct name search</span>
+$ textlens discover GLM-OCR --compatible-only
+$ textlens discover DeepSeek-OCR --limit 5
+$ textlens discover PaddleOCR-VL --include-unknown
+
+<span class="t-cmt"># Force a fresh fetch (bypasses 15-minute cache)</span>
+$ textlens discover GLM-OCR --refresh</div>
+
+      <div class="note">
+        <strong>Model names only</strong>
+        <p>Discovery searches by model name, not use-case keywords. Enter a real model name such as <code>GLM-OCR</code>, <code>DeepSeek-OCR</code>, or <code>LightOnOCR</code>.</p>
+      </div>
+    </section>
+
+    <section id="server">
+      <h2>REST API server</h2>
+      <p>Requires the <code>server</code> extra. Launches a FastAPI service with automatic Swagger documentation.</p>
+      <div class="code-block"><span class="t-kw">import</span> textlens
+
+textlens.serve(host=<span class="t-str">"127.0.0.1"</span>, port=<span class="t-num">8000</span>)</div>
+
+      <p>Open <code>http://127.0.0.1:8000/docs</code> for the interactive Swagger UI.</p>
+
+      <h3>POST /api/v1/ocr — file upload</h3>
+      <div class="code-block"><span class="t-cmt"># cURL</span>
+curl -X POST "http://localhost:8000/api/v1/ocr" \
+  -F "file=@invoice.png" \
+  -F "prompt=Text Recognition:"
+
+<span class="t-cmt"># Python</span>
+<span class="t-kw">import</span> requests
+
+<span class="t-kw">with</span> <span class="t-fn">open</span>(<span class="t-str">"invoice.png"</span>, <span class="t-str">"rb"</span>) <span class="t-kw">as</span> f:
+    r = requests.post(<span class="t-str">"http://localhost:8000/api/v1/ocr"</span>, files={<span class="t-str">"file"</span>: f})
+    print(r.json()[<span class="t-str">"text"</span>])</div>
+    </section>
+
+    <section id="cli">
+      <h2>CLI reference</h2>
+      <p>All commands are available as <code>textlens &lt;command&gt;</code> after installation.</p>
+      <table class="doc-table">
+        <tr><th>Command</th><th>Description</th></tr>
+        <tr><td>textlens models</td><td>List the official TextLens model catalog with VRAM and install status</td></tr>
+        <tr><td>textlens model install &lt;id&gt;</td><td>Download and cache a model from Hugging Face</td></tr>
+        <tr><td>textlens model remove &lt;id&gt;</td><td>Delete a cached model from disk</td></tr>
+        <tr><td>textlens model info &lt;id&gt;</td><td>Show model metadata, disk usage, and hardware requirements</td></tr>
+        <tr><td>textlens doctor</td><td>Inspect GPU, CUDA, VRAM, PyTorch, and get model recommendations</td></tr>
+        <tr><td>textlens discover [name]</td><td>Search Hugging Face live for OCR/VLM models by name</td></tr>
+        <tr><td>textlens read &lt;file&gt;</td><td>Run OCR on an image, PDF, or URL and print the result</td></tr>
+        <tr><td>textlens batch &lt;dir&gt;</td><td>Batch process a folder with parallel workers and live dashboard</td></tr>
+        <tr><td>textlens serve</td><td>Launch the OCR REST API at localhost:8000</td></tr>
+      </table>
+
+      <h3>batch flags</h3>
+      <div class="code-block">textlens batch ./documents \
+  --model glm-ocr \
+  --workers 1 \
+  --format json \
+  --output ./results \
+  --retries 2 \
+  --dpi 200 \
+  --port 8765 \
+  --no-dashboard     # disable the live dashboard
+  --no-recursive     # do not scan subdirectories</div>
+    </section>
+
+    <section id="models">
+      <h2>Supported models</h2>
+      <div class="note">
+        <strong>VLM-powered — NVIDIA CUDA GPU required</strong>
+        <p>All supported models are vision-language models. A CUDA-capable NVIDIA GPU is strongly recommended. CPU fallback is available but significantly slower.</p>
+      </div>
+      <table class="doc-table">
+        <tr><th>Model ID</th><th>Hugging Face Repo</th><th>Parameters</th><th>Min VRAM</th><th>Best for</th></tr>
+        <tr>
+          <td>glm-ocr <span class="badge badge-default">Default</span></td>
+          <td>zai-org/GLM-OCR</td><td>0.9B</td><td>6 GB</td>
+          <td>General OCR, invoices, receipts, tables</td>
+        </tr>
+        <tr>
+          <td>lighton-ocr</td>
+          <td>lightonai/LightOnOCR-2-1B</td><td>1B</td><td>8 GB</td>
+          <td>Scientific documents, academic papers</td>
+        </tr>
+        <tr>
+          <td>hunyuan-ocr</td>
+          <td>tencent/HunyuanOCR</td><td>~1B</td><td>8 GB</td>
+          <td>Enterprise documents, charts, layouts</td>
+        </tr>
+        <tr>
+          <td>smolvlm</td>
+          <td>HuggingFaceTB/SmolVLM-256M-Instruct</td><td>256M</td><td>2 GB</td>
+          <td>Low-VRAM devices, quick prototyping</td>
+        </tr>
+      </table>
+
+      <p>Use <code>textlens models</code> to see which models are installed on your system.</p>
+    </section>
+
+    <section id="faq">
+      <h2>FAQ</h2>
+
+      <h3>Is TextLens cloud-based?</h3>
+      <p>No. TextLens is designed for local OCR. Images and PDFs are processed on your machine by the model you configure. No data leaves your computer.</p>
+
+      <h3>Do I need an NVIDIA GPU?</h3>
+      <p>Most supported engines are VLMs so an NVIDIA CUDA GPU is strongly recommended. CPU fallback exists but is substantially slower, especially for multi-page PDFs and batch workloads.</p>
+
+      <h3>Does BatchOCR support PDFs?</h3>
+      <p>Yes. All four backends support PDF input. PDF pages are rendered to images internally at the configured DPI before inference.</p>
+
+      <h3>Can I use TextLens without downloading models first?</h3>
+      <p>Models are downloaded from Hugging Face on first use and cached locally. Use <code>textlens model install &lt;id&gt;</code> to pre-download a model before running a job.</p>
+
+      <h3>What is the fastest model?</h3>
+      <p><code>smolvlm</code> is the fastest and uses the least VRAM (256M parameters, 2 GB). For accuracy-critical workloads, <code>glm-ocr</code> is the recommended default.</p>
+    </section>
+
+  </main>
+
+  <!-- ── Right TOC ──────────────────────────────── -->
+  <aside class="toc">
+    <p>ON THIS PAGE</p>
+    <a href="#what">What is TextLens?</a>
+    <a href="#problem">Problem solved</a>
+    <a href="#install">Installation</a>
+    <a href="#cuda">CUDA setup</a>
+    <a href="#ocr">Basic OCR</a>
+    <a href="#pdf">PDF processing</a>
+    <a href="#batch">BatchOCR</a>
+    <a href="#doctor">Doctor</a>
+    <a href="#discover">Discovery</a>
+    <a href="#server">REST API</a>
+    <a href="#cli">CLI reference</a>
+    <a href="#models">Models</a>
+    <a href="#faq">FAQ</a>
+  </aside>
+
+</div>
+</body>
+</html>
