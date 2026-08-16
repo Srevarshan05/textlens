@@ -65,16 +65,11 @@
             <a class="button button-primary" href="#quickstart">Start building &darr;</a>
             <a class="button button-outline" href="docs.html">Read the docs</a>
           </div>
-          <div style="display:flex;justify-content:center;margin-bottom:16px;">
-            <a href="https://pypi.org/project/textlens-ocr/" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:rgba(112,223,127,0.1);border:1px solid rgba(112,223,127,0.3);color:#70df7f;padding:6px 16px;border-radius:999px;font-size:0.8rem;font-weight:700;text-decoration:none;transition:all 0.2s;">
+          <div style="display:flex;justify-content:center;margin-bottom:12px;">
+            <a href="https://pypi.org/project/textlens-ocr/" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:rgba(112,223,127,0.1);border:1px solid rgba(112,223,127,0.3);color:#70df7f;padding:7px 18px;border-radius:999px;font-size:0.82rem;font-weight:700;text-decoration:none;transition:all 0.2s;">
               <span style="width:8px;height:8px;border-radius:50%;background:#70df7f;display:inline-block;box-shadow:0 0 8px #70df7f;"></span>
               Now Officially Available on PyPI &middot; <code style="font-family:monospace;color:#fff;">pip install textlens-ocr</code> &rarr;
             </a>
-          </div>
-          <div class="install-pill">
-            <span class="terminal-dot"></span>
-            <code>pip install "textlens-ocr[inference,ui]"</code>
-            <button class="copy-button" data-copy='pip install "textlens-ocr[inference,ui]"'>Copy</button>
           </div>
         </div>
         <div class="hero-stage container">
@@ -356,14 +351,14 @@ text = ocr.read(<span class="t-green">"invoice.pdf"</span>)
           <div class="sticky-copy reveal-left">
             <p class="section-kicker">QUICK SETUP</p>
             <h2>From zero to local OCR in minutes</h2>
-            <p>TextLens is designed around a simple rule &mdash; install only the features you need. The small core stays light while inference, UI, and server stacks are optional extras</p>
+            <p style="color:var(--text-soft); font-size:15px; margin:12px 0 20px; line-height:1.6;">TextLens is designed around a simple rule &mdash; install only the features you need. The small core stays light while inference, UI, and server stacks are optional extras</p>
             <a class="text-link" href="docs.html#install">See all installation choices <span>&rarr;</span></a>
           </div>
           <div class="steps stagger">
             <article class="step">
               <div class="step-number">01</div>
               <div>
-                <p>Install your feature set</p>
+                <p style="font-weight:700; color:#fff; margin-bottom:8px;">Install your feature set</p>
                 <div class="terminal-window compact" style="position:relative">
                   <div class="terminal-bar"><span></span><span></span><span></span></div>
                   <pre><code><span class="t-comment"># OCR + dashboard tools</span>
@@ -375,7 +370,7 @@ pip install <span class="t-green">"textlens-ocr[inference,ui]"</span></code></pr
             <article class="step">
               <div class="step-number">02</div>
               <div>
-                <p>Check CUDA and choose a model</p>
+                <p style="font-weight:700; color:#fff; margin-bottom:8px;">Check CUDA and choose a model</p>
                 <div class="terminal-window compact" style="position:relative">
                   <div class="terminal-bar"><span></span><span></span><span></span></div>
                   <pre><code><span class="prompt">$</span> textlens doctor
@@ -388,7 +383,7 @@ pip install <span class="t-green">"textlens-ocr[inference,ui]"</span></code></pr
             <article class="step">
               <div class="step-number">03</div>
               <div>
-                <p>Run your first OCR task</p>
+                <p style="font-weight:700; color:#fff; margin-bottom:8px;">Run your first OCR task</p>
                 <div class="terminal-window compact" style="position:relative">
                   <div class="terminal-bar"><span></span><span></span><span></span></div>
                   <pre><code><span class="prompt">$</span> textlens read invoice.png
