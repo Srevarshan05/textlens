@@ -16,6 +16,7 @@ All fields are detected at call time and returned as an immutable dataclass.
 from __future__ import annotations
 
 import dataclasses
+import importlib.metadata
 import logging
 import os
 import platform
@@ -31,12 +32,33 @@ logger = logging.getLogger("textlens.models.hardware")
 # Optional imports with graceful fallback
 # ---------------------------------------------------------------------------
 
-try:
-    import torch
+# Importing PyTorch can take several seconds on a cold Windows process.  The
+# Doctor and model advisor only need the driver-reported hardware, so defer the
+# import until a legacy caller explicitly asks for torch-level inspection.
+torch = None
+_TORCH: Optional[bool] = None
 
-    _TORCH = True
-except ImportError:
-    _TORCH = False
+
+def _get_torch():
+    """Return PyTorch on demand, or ``None`` when it is unavailable."""
+    global _TORCH, torch
+    if _TORCH is None:
+        try:
+            import torch as imported_torch
+
+            torch = imported_torch
+            _TORCH = True
+        except ImportError:
+            _TORCH = False
+    return torch if _TORCH else None
+
+
+def _installed_torch_version() -> str:
+    """Return the installed torch distribution version without importing it."""
+    try:
+        return importlib.metadata.version("torch")
+    except importlib.metadata.PackageNotFoundError:
+        return "Not Installed"
 
 try:
     import psutil
@@ -155,16 +177,28 @@ def _detect_os() -> str:
 
 def _detect_cpu_name() -> str:
     """Return CPU model name using psutil or platform fallback."""
-    if _PSUTIL:
-        # psutil doesn't expose CPU name directly — use platform
-        pass
     system = platform.system()
     try:
         if system == "Windows":
+            # WMIC was removed from recent Windows releases.  Resolve an
+            # actual executable first so PowerShell cannot invoke its `cpu`
+            # alias and pollute the CLI with an error message.
+            from shutil import which
+
+            wmic = which("wmic.exe") or which("wmic")
+            if not wmic:
+                return platform.processor() or "Unknown CPU"
             out = subprocess.check_output(
-                ["wmic", "cpu", "get", "Name"], text=True, timeout=5
+                [wmic, "cpu", "get", "Name"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+                timeout=1.5,
             )
-            lines = [ln.strip() for ln in out.splitlines() if ln.strip() and ln.strip() != "Name"]
+            lines = [
+                line.strip()
+                for line in out.splitlines()
+                if line.strip() and line.strip() != "Name"
+            ]
             if lines:
                 return lines[0]
         elif system == "Darwin":
@@ -220,13 +254,14 @@ def _detect_system_cuda_version() -> Optional[str]:
 
 def _detect_gpus_torch() -> List[GPUInfo]:
     """Detect GPUs using PyTorch CUDA."""
-    if not _TORCH or not torch.cuda.is_available():
+    active_torch = _get_torch()
+    if active_torch is None or not active_torch.cuda.is_available():
         return []
     gpus: List[GPUInfo] = []
-    for i in range(torch.cuda.device_count()):
-        props = torch.cuda.get_device_properties(i)
+    for i in range(active_torch.cuda.device_count()):
+        props = active_torch.cuda.get_device_properties(i)
         total_gb = round(props.total_memory / (1024 ** 3), 2)
-        free_bytes = props.total_memory - torch.cuda.memory_allocated(i)
+        free_bytes = props.total_memory - active_torch.cuda.memory_allocated(i)
         free_gb = round(free_bytes / (1024 ** 3), 2)
         gpus.append(
             GPUInfo(
@@ -291,7 +326,7 @@ def _detect_gpus_nvidia_smi() -> List[GPUInfo]:
                         name=name,
                         vram_total_gb=round(total_mb / 1024, 2),
                         vram_free_gb=round(free_mb / 1024, 2),
-                        cuda_available=False,
+                        cuda_available=True,
                     )
                 )
             except ValueError:
@@ -320,23 +355,17 @@ def inspect_hardware() -> HardwareProfile:
     """
     os_name = _detect_os()
     python_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    torch_ver = torch.__version__ if _TORCH else "Not Installed"
-
-    cuda_available = _TORCH and torch.cuda.is_available()
-    cuda_version: Optional[str] = None
-    if _TORCH and hasattr(torch.version, "cuda") and torch.version.cuda:
-        cuda_version = torch.version.cuda
-
+    torch_ver = _installed_torch_version()
     system_cuda = _detect_system_cuda_version()
 
-    # GPU detection — try torch first, then GPUtil, then nvidia-smi
-    gpus: List[GPUInfo] = []
-    if cuda_available:
-        gpus = _detect_gpus_torch()
+    # NVIDIA's driver is much faster to inspect than importing PyTorch.  This
+    # keeps `textlens doctor` and `textlens discover` responsive while still
+    # reporting hardware directly from the installed driver.
+    gpus = _detect_gpus_nvidia_smi()
     if not gpus:
         gpus = _detect_gpus_gputil()
-    if not gpus:
-        gpus = _detect_gpus_nvidia_smi()
+    cuda_available = bool(gpus)
+    cuda_version: Optional[str] = None
 
     primary_gpu = gpus[0] if gpus else None
     primary_gpu_name = primary_gpu.name if primary_gpu else None

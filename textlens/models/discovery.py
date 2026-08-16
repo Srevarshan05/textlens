@@ -9,12 +9,86 @@ automatically treated as TextLens-supported backends.
 from __future__ import annotations
 
 import dataclasses
+import hashlib
+import json
 import math
+import os
+from pathlib import Path
 import re
+import time
+import warnings
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Iterable, List, Optional
 
 from textlens.models.hardware import HardwareProfile, inspect_hardware
 from textlens.models.registry import ModelRegistry
+
+
+_DISCOVERY_CACHE_TTL_SECONDS = 15 * 60
+
+
+def _cache_path() -> Path:
+    """Return TextLens' per-user cache location without touching a repo."""
+    base = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_CACHE_HOME")
+    if base:
+        return Path(base) / "TextLens" / "discovery-cache.json"
+    return Path.home() / ".cache" / "textlens" / "discovery-cache.json"
+
+
+def _cache_key(
+    search: str,
+    use_case: Optional[str],
+    limit: int,
+    compatible_only: bool,
+    include_unknown: bool,
+    profile: HardwareProfile,
+) -> str:
+    """Create a stable cache key that includes hardware-sensitive options."""
+    payload = json.dumps(
+        {
+            "search": search.casefold(),
+            "use_case": (use_case or "").casefold(),
+            "limit": limit,
+            "compatible_only": compatible_only,
+            "include_unknown": include_unknown,
+            "cuda": profile.cuda_available,
+            "vram": profile.primary_vram_gb,
+        },
+        sort_keys=True,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _read_cache(key: str) -> Optional[List[DiscoveredModel]]:
+    """Read a fresh cached discovery response, ignoring corrupt cache files."""
+    try:
+        data = json.loads(_cache_path().read_text(encoding="utf-8"))
+        entry = data.get(key)
+        if not entry or time.time() - float(entry["saved_at"]) > _DISCOVERY_CACHE_TTL_SECONDS:
+            return None
+        return [DiscoveredModel(**item) for item in entry["models"]]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _write_cache(key: str, models: List[DiscoveredModel]) -> None:
+    """Persist discovery results atomically; caching must never break the CLI."""
+    try:
+        path = _cache_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            data = {}
+        data[key] = {
+            "saved_at": time.time(),
+            "models": [dataclasses.asdict(item) for item in models],
+        }
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(data, default=str), encoding="utf-8")
+        temporary.replace(path)
+    except OSError:
+        pass
 
 
 @dataclasses.dataclass(frozen=True)
@@ -89,10 +163,57 @@ def _official_metadata(repo_id: str) -> Any:
     )
 
 
+def _safetensors_parameter_count(api: Any, repo_id: str) -> Optional[float]:
+    """Read an exact parameter count from published safetensors metadata.
+
+    The Hub does not expose parameter counts for every repository in its search
+    response. Safetensors repositories can publish a tensor-level count, which
+    is the most reliable generic source for the hardware advisor.
+    """
+    try:
+        metadata = api.get_safetensors_metadata(repo_id, timeout=2)
+        counts = getattr(metadata, "parameter_count", None)
+        if isinstance(counts, dict):
+            total = sum(value for value in counts.values() if isinstance(value, int))
+            if total > 0:
+                return round(total / 1_000_000_000, 3)
+    except Exception:
+        # Many repositories use non-safetensors weights or do not publish
+        # enough metadata. They are handled by the explicit unknown filter.
+        pass
+    return None
+
+
+def _published_parameter_counts(api: Any, models: List[Any]) -> dict[str, float]:
+    """Fetch missing published parameter metadata concurrently and safely."""
+    missing = [
+        str(getattr(model, "modelId", ""))
+        for model in models
+        if _official_metadata(str(getattr(model, "modelId", ""))) is None
+        and _parameter_count_billion(model) is None
+    ]
+    counts: dict[str, float] = {}
+    if not missing:
+        return counts
+
+    # Network calls are bounded: discovery remains responsive while retrieving
+    # the extra metadata needed for an honest hardware recommendation.
+    with ThreadPoolExecutor(max_workers=min(4, len(missing))) as executor:
+        futures = {
+            executor.submit(_safetensors_parameter_count, api, repo_id): repo_id
+            for repo_id in missing
+        }
+        for future in as_completed(futures):
+            value = future.result()
+            if value is not None:
+                counts[futures[future]] = value
+    return counts
+
+
 def _compatibility(profile: HardwareProfile, required_vram_gb: Optional[float]) -> str:
     """Classify a model candidate against locally detected hardware."""
     if required_vram_gb is None:
-        return "Unknown VRAM"
+        return "VRAM not published"
     if not profile.cuda_available:
         return "CPU fallback (slow)"
     if profile.primary_vram_gb >= required_vram_gb:
@@ -127,6 +248,9 @@ def discover_models(
     use_case: Optional[str] = None,
     limit: int = 12,
     compatible_only: bool = False,
+    include_unknown: bool = False,
+    refresh: bool = False,
+    use_cache: bool = False,
     profile: Optional[HardwareProfile] = None,
 ) -> List[DiscoveredModel]:
     """Discover OCR/VLM candidates from the Hugging Face Hub.
@@ -142,6 +266,15 @@ def discover_models(
         Maximum number of candidates to return (1-50).
     compatible_only:
         Return only candidates estimated to fit detected CUDA VRAM.
+    include_unknown:
+        Include repositories with no published or discoverable parameter count.
+        They cannot receive a reliable VRAM compatibility decision and are
+        hidden by default.
+    refresh:
+        Ignore the short-lived local cache and query Hugging Face again.
+    use_cache:
+        Enable the 15-minute local response cache. The CLI enables this for
+        fast repeat searches; library callers stay deterministic by default.
     profile:
         Optional hardware snapshot, mainly useful for tests and integrations.
 
@@ -152,27 +285,48 @@ def discover_models(
     RuntimeError
         If the Hugging Face request fails.
     """
+    limit = max(1, min(int(limit), 50))
+    query = " ".join(part for part in (search.strip(), (use_case or "").strip()) if part)
+    cache_enabled = use_cache
+    active_profile = profile or inspect_hardware()
+    key = _cache_key(
+        search, use_case, limit, compatible_only, include_unknown, active_profile
+    )
+    if cache_enabled and not refresh:
+        cached_models = _read_cache(key)
+        if cached_models is not None:
+            return cached_models
+
     try:
         from huggingface_hub import HfApi
+        from huggingface_hub.utils import disable_progress_bars
     except ImportError as exc:
         raise ImportError(
             "Online model discovery requires the catalog extra. Install with: "
             'pip install "textlens-srevarshan[catalog]"'
         ) from exc
 
-    limit = max(1, min(int(limit), 50))
-    query = " ".join(part for part in (search.strip(), (use_case or "").strip()) if part)
-    active_profile = profile or inspect_hardware()
-
     try:
-        # Ask for more than the final limit because hardware filtering may
-        # remove candidates after the Hub ranks them by downloads.
-        raw_models: Iterable[Any] = HfApi().list_models(
+        # Keep the first live request bounded.  Follow-up calls are served
+        # from the local cache, while --refresh intentionally re-queries Hub.
+        api = HfApi()
+        raw_models: Iterable[Any] = api.list_models(
             search=query,
             sort="downloads",
-            limit=limit * 3 if compatible_only else limit,
+            limit=limit,
             full=True,
         )
+        raw_models = list(raw_models)
+        # Safetensors inspection is read-only, but the Hub client otherwise
+        # emits progress bars and a Windows symlink warning into the CLI.
+        # TextLens keeps this advisor output focused on the recommendation.
+        with warnings.catch_warnings(), disable_progress_bars():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*symlinks by default.*",
+                category=UserWarning,
+            )
+            published_counts = _published_parameter_counts(api, raw_models)
         candidates: List[DiscoveredModel] = []
         for model in raw_models:
             repo_id = str(getattr(model, "modelId", "unknown"))
@@ -180,7 +334,7 @@ def discover_models(
             params_b = (
                 _parse_parameter_label(official.parameters)
                 if official is not None
-                else _parameter_count_billion(model)
+                else _parameter_count_billion(model) or published_counts.get(repo_id)
             )
             # Official registry entries use their tested minimum VRAM; all
             # third-party candidates use a deliberately conservative estimate.
@@ -189,14 +343,20 @@ def discover_models(
                 if official is not None
                 else _estimate_vram_gb(params_b)
             )
+            if params_b is None and not include_unknown:
+                continue
             compatibility = _compatibility(active_profile, estimated_vram)
-            if compatible_only and compatibility != "Compatible":
+            # An explicitly requested unknown-metadata model remains visible
+            # for research, but TextLens never claims it fits the GPU.
+            if compatible_only and compatibility != "Compatible" and not (
+                include_unknown and compatibility == "VRAM not published"
+            ):
                 continue
             candidates.append(
                 DiscoveredModel(
                     repo_id=repo_id,
                     pipeline_tag=getattr(model, "pipeline_tag", None),
-                    tags=list(getattr(model, "tags", None) or []),
+                    tags=[str(tag) for tag in (getattr(model, "tags", None) or [])],
                     downloads=int(getattr(model, "downloads", 0) or 0),
                     likes=int(getattr(model, "likes", 0) or 0),
                     parameter_count_b=params_b,
@@ -211,6 +371,8 @@ def discover_models(
             )
             if len(candidates) >= limit:
                 break
+        if cache_enabled:
+            _write_cache(key, candidates)
         return candidates
     except Exception as exc:
         raise RuntimeError(f"Could not query Hugging Face model catalog: {exc}") from exc
@@ -228,36 +390,48 @@ def print_discovered_models(
         return ", ".join(item.use_case_signals[:4]) + ", ..."
 
     try:
+        from rich import box
         from rich.console import Console
         from rich.table import Table
+        from rich.text import Text
 
-        table = Table(title="TextLens - Live Hugging Face OCR/VLM Candidates")
+        table = Table(
+            title="[bold cyan]TextLens Live Model Finder[/bold cyan]",
+            box=box.ROUNDED,
+            header_style="bold bright_cyan",
+            padding=(0, 1),
+            show_lines=False,
+        )
         table.add_column("Repository", style="cyan", overflow="fold")
-        table.add_column("Params", justify="right")
-        table.add_column("VRAM guide", justify="right")
-        table.add_column("Hardware fit")
+        table.add_column("Parameters", justify="right", style="bold white")
+        table.add_column("VRAM guide", justify="right", style="yellow")
+        table.add_column("Hardware fit", min_width=15)
         table.add_column("Use-case signals", overflow="fold")
-        table.add_column("Downloads", justify="right")
         for item in models:
             params = f"{item.parameter_count_b:g}B" if item.parameter_count_b is not None else "Unknown"
             vram = f"~{item.estimated_vram_gb:g} GB" if item.estimated_vram_gb is not None else "Unknown"
+            fit_style = (
+                "bold green" if item.compatibility == "Compatible"
+                else "bold yellow" if item.compatibility.startswith("Needs")
+                else "dim"
+            )
             table.add_row(
                 item.repo_id,
                 params,
                 vram,
-                item.compatibility,
+                Text(item.compatibility, style=fit_style),
                 compact_signals(item),
-                f"{item.downloads:,}",
             )
-        Console().print(
-            f"Detected hardware: {profile.primary_gpu_name or 'CPU'} "
-            f"({profile.primary_vram_gb:g} GB VRAM)"
+        console = Console(highlight=False)
+        console.print(
+            f"[bold]Hardware[/bold]  [cyan]{profile.primary_gpu_name or 'CPU'}[/cyan] "
+            f"[dim]({profile.primary_vram_gb:g} GB VRAM)[/dim]"
         )
-        Console().print(table)
+        console.print(table)
     except ImportError:
         print(f"Detected hardware: {profile.primary_gpu_name or 'CPU'} ({profile.primary_vram_gb:g} GB VRAM)")
         for item in models:
             params = f"{item.parameter_count_b:g}B" if item.parameter_count_b is not None else "Unknown"
             vram = f"~{item.estimated_vram_gb:g} GB" if item.estimated_vram_gb is not None else "Unknown"
             print(f"\n{item.repo_id}\n  Params: {params}; VRAM guide: {vram}; Fit: {item.compatibility}")
-            print(f"  Use cases: {compact_signals(item)}; Downloads: {item.downloads:,}")
+            print(f"  Pipeline: {item.pipeline_tag or 'Not published'}; Use cases: {compact_signals(item)}")

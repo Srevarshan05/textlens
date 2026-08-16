@@ -97,20 +97,29 @@ Face Hub, install the small `catalog` extra and run:
 
 ```bash
 python -m pip install "textlens-srevarshan[catalog]"
-textlens discover
-textlens discover invoices --compatible
-textlens discover handwriting --limit 10
+textlens discover                         # opens an interactive search prompt
+textlens discover DeepSeek-OCR --compatible
+textlens discover --search "PaddleOCR-VL" --limit 10
 ```
 
-`textlens discover <topic>` is the simple form. `--search` and `--use-case`
-remain available for advanced searches and scripts.
+`textlens discover` searches Hugging Face **by model name only**. Enter a full
+or partial repository/model name such as `DeepSeek-OCR`, `PaddleOCR-VL`, or
+`GOT-OCR2_0`. A blank interactive search shows popular OCR/VLM repositories.
+`textlens discover <model-name>` and `--search <model-name>` are the
+non-interactive forms for scripts.
 
-`discover` ranks Hub results by downloads and displays parameter count (when
-published), a VRAM guide, and detected GPU fit. Official TextLens models retain
-their catalog minimum VRAM; other Hub repositories use a conservative fp16
-estimate from reported parameters. These are discovery recommendations, not a
-guarantee that a model will run or a statement that TextLens already has an
-inference backend for it.
+`--include-unknown` is a `discover` option only. It includes repositories that
+do not publish parameter metadata and labels their hardware fit as `VRAM not
+published`; TextLens never treats that label as GPU compatibility. When it is
+combined with `--compatible-only`, verified compatible models are shown first
+and explicitly requested unverified models remain visible for research.
+
+`discover` does not show a Downloads column. It shows models with published
+parameter information by default, a VRAM guide, detected GPU fit, pipeline,
+and use-case signals. Official TextLens models retain their catalog minimum
+VRAM; other Hub repositories use a conservative fp16 estimate. These are
+discovery recommendations, not a guarantee that a model will run or a
+statement that TextLens already has an inference backend for it.
 
 ## NVIDIA CUDA setup (Windows and Linux)
 
@@ -262,13 +271,23 @@ Open `http://127.0.0.1:8000/docs` for Swagger UI. Available endpoints include `G
 
 ```bash
 textlens models
+textlens discover                            # interactive model-name search
+textlens discover DeepSeek-OCR --compatible-only
+textlens discover --search "PaddleOCR-VL" --limit 10
+textlens discover GOT-OCR2_0 --include-unknown
+textlens discover --refresh                  # bypass the 15-minute cache
 textlens model install smolvlm
 textlens model info glm-ocr
+textlens model remove smolvlm
 textlens doctor
 textlens read document.png --device cuda
 textlens batch ./documents --model glm-ocr --workers 2 --format markdown --no-dashboard
-textlens serve --port 8000
+textlens serve --host 0.0.0.0 --port 8000
 ```
+
+`textlens doctor` only analyses local hardware and recommends official
+TextLens catalog models. It does not search Hugging Face, so options such as
+`--include-unknown` apply to `textlens discover`, not Doctor.
 
 ## Test before using a model
 

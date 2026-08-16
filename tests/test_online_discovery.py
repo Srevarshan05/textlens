@@ -27,6 +27,9 @@ class _FakeHfApi:
         self.__class__.calls.append(kwargs)
         return iter(self.__class__.models)
 
+    def get_safetensors_metadata(self, _repo_id, timeout=6):
+        return SimpleNamespace(parameter_count={"F32": 2_000_000_000})
+
 
 def test_discover_models_enriches_hub_metadata():
     _FakeHfApi.calls = []
@@ -62,7 +65,9 @@ def test_compatible_only_removes_models_that_exceed_vram():
         result = discover_models(compatible_only=True, limit=5, profile=_profile())
 
     assert [item.repo_id for item in result] == ["acme/small-1B-ocr"]
-    assert _FakeHfApi.calls[0]["limit"] == 15
+    # Discovery deliberately keeps the first live request bounded. Repeated
+    # searches are served from a short-lived local cache.
+    assert _FakeHfApi.calls[0]["limit"] == 5
 
 
 def test_discover_models_uses_exact_official_catalog_requirements():
@@ -76,3 +81,31 @@ def test_discover_models_uses_exact_official_catalog_requirements():
     assert result[0].estimated_vram_gb == 6.0
     assert result[0].compatibility == "Compatible"
     assert "Invoices" in result[0].use_case_signals
+
+
+def test_discover_models_hides_unknown_parameters_unless_requested():
+    _FakeHfApi.models = [SimpleNamespace(modelId="acme/unpublished-ocr", tags=["ocr"], safetensors=None)]
+    with patch("huggingface_hub.HfApi", _FakeHfApi), patch.object(
+        _FakeHfApi, "get_safetensors_metadata", side_effect=RuntimeError("no metadata")
+    ):
+        hidden = discover_models(limit=1, profile=_profile())
+        visible = discover_models(limit=1, include_unknown=True, profile=_profile())
+
+    assert hidden == []
+    assert visible[0].parameter_count_b is None
+    assert visible[0].compatibility == "VRAM not published"
+
+
+def test_include_unknown_keeps_unverified_models_visible_with_compatible_filter():
+    _FakeHfApi.models = [SimpleNamespace(modelId="acme/unpublished-ocr", tags=["ocr"], safetensors=None)]
+    with patch("huggingface_hub.HfApi", _FakeHfApi), patch.object(
+        _FakeHfApi, "get_safetensors_metadata", side_effect=RuntimeError("no metadata")
+    ):
+        result = discover_models(
+            limit=1,
+            compatible_only=True,
+            include_unknown=True,
+            profile=_profile(),
+        )
+
+    assert result[0].compatibility == "VRAM not published"

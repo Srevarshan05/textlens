@@ -68,18 +68,55 @@ def _cmd_discover(args: argparse.Namespace) -> None:
     from textlens.models.discovery import discover_models, print_discovered_models
     from textlens.models.hardware import inspect_hardware
 
-    if args.topic and args.use_case:
-        _print_error("Use either a topic (for example: 'discover invoices') or --use-case, not both.")
-        sys.exit(2)
+    interactive = args.interactive or (
+        not args.no_interactive
+        and sys.stdin.isatty()
+        and not args.model_name
+        and args.search == "ocr"
+    )
+    if interactive:
+        try:
+            try:
+                from rich.prompt import Confirm, Prompt
 
-    use_case = args.use_case or args.topic
+                search = Prompt.ask(
+                    "[bold cyan]Search Hugging Face model name[/bold cyan]",
+                    default="",
+                ).strip()
+                include_unknown = Confirm.ask(
+                    "[dim]Include repositories without published parameter metadata?[/dim]",
+                    default=False,
+                )
+                compatible_only = Confirm.ask(
+                    "[green]Show only verified models that fit this GPU?[/green]",
+                    default=False,
+                )
+            except ImportError:
+                search = input("\nSearch Hugging Face model name [popular OCR/VLM models]: ").strip()
+                include_unknown = input(
+                    "Include models without published parameter metadata? [y/N]: "
+                ).strip().lower() in {"y", "yes"}
+                compatible_only = input(
+                    "Show only verified models that fit this GPU? [y/N]: "
+                ).strip().lower() in {"y", "yes"}
+            if search:
+                args.search = search
+        except (EOFError, KeyboardInterrupt):
+            print("\nDiscovery cancelled.")
+            return
+    else:
+        include_unknown = args.include_unknown
+        compatible_only = args.compatible_only
+
     profile = inspect_hardware()
     try:
         models = discover_models(
-            search=args.search,
-            use_case=use_case,
+            search=args.model_name or args.search,
             limit=args.limit,
-            compatible_only=args.compatible_only,
+            compatible_only=compatible_only,
+            include_unknown=include_unknown,
+            refresh=args.refresh,
+            use_cache=True,
             profile=profile,
         )
     except (ImportError, RuntimeError) as exc:
@@ -87,12 +124,14 @@ def _cmd_discover(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     if not models:
-        print("No matching Hugging Face candidates found.")
+        query = args.model_name or args.search
+        print(f"No Hugging Face model names matched '{query}'.")
+        print("Try an exact name such as DeepSeek-OCR, PaddleOCR-VL, or GOT-OCR2_0.")
         return
     print_discovered_models(models, profile)
     print(
-        "\nNote: Live candidates are research suggestions, not automatically "
-        "supported TextLens backends. Check each model card/license before use."
+        "\nVRAM guidance is based on published parameter metadata. Live results "
+        "are research suggestions, not automatically supported TextLens backends."
     )
 
 
@@ -184,8 +223,8 @@ def _build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Examples:\n"
             "  textlens models\n"
-            "  textlens discover invoices --compatible\n"
-            "  textlens discover handwriting --limit 10\n"
+            "  textlens discover                         # search by model name\n"
+            "  textlens discover DeepSeek-OCR --compatible\n"
             "  textlens model install glm-ocr\n"
             "  textlens model info smolvlm\n"
             "  textlens model remove smolvlm\n"
@@ -210,21 +249,44 @@ def _build_parser() -> argparse.ArgumentParser:
 
     discover_p = sub.add_parser(
         "discover",
-        help="Search live Hugging Face OCR/VLM candidates for this hardware",
+        help="Search live Hugging Face OCR/VLM repositories by model name",
     )
     discover_p.add_argument(
-        "topic",
+        "model_name",
         nargs="?",
-        help="Optional use case, e.g. invoices, tables, or handwriting",
+        help="Optional model name, e.g. DeepSeek-OCR or PaddleOCR-VL",
     )
-    discover_p.add_argument("--search", default="ocr", help="Hugging Face search phrase (default: ocr)")
-    discover_p.add_argument("--use-case", help="Refine candidates, e.g. invoices, tables, handwriting")
+    discover_p.add_argument(
+        "--search",
+        default="ocr",
+        help="Model name to search (default: popular OCR/VLM models)",
+    )
     discover_p.add_argument("--limit", type=int, default=12, help="Candidates to show (1-50; default: 12)")
     discover_p.add_argument(
         "--compatible", "--compatible-only",
         dest="compatible_only",
         action="store_true",
         help="Only show models whose estimated VRAM fits detected CUDA hardware",
+    )
+    discover_p.add_argument(
+        "--include-unknown",
+        action="store_true",
+        help="Also show repositories without published parameter metadata",
+    )
+    discover_p.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Open the interactive model-search prompt",
+    )
+    discover_p.add_argument(
+        "--no-interactive",
+        action="store_true",
+        help="Do not open the prompt when no model name is supplied",
+    )
+    discover_p.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Fetch fresh results instead of using the 15-minute local cache",
     )
 
     # ── model (sub-sub-commands) ────────────────────────────────────────
@@ -379,9 +441,9 @@ def main() -> None:
         _cmd_serve(args)
 
     elif args.command in ("hardware", "info"):
-        # Legacy fallback
-        from textlens.hardware import print_hardware_status
-        print_hardware_status()
+        # Legacy aliases share Doctor's fast driver-based inspection instead
+        # of importing the older eager-PyTorch hardware module.
+        _cmd_doctor(args)
 
     else:
         parser.print_help()

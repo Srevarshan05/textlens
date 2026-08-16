@@ -38,7 +38,7 @@ class TestCLIDiscover:
             with patch.object(sys, "argv", ["textlens", "discover", "invoices"]):
                 from textlens.cli import main
                 main()
-            assert mock.call_args.args[0].topic == "invoices"
+            assert mock.call_args.args[0].model_name == "invoices"
 
     def test_discover_compatible_alias_is_supported(self):
         with patch("textlens.cli._cmd_discover") as mock:

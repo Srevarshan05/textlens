@@ -287,7 +287,7 @@ class HardwareDoctor:
                 rec_table.add_row(
                     Text(item.model.display_name, style="bold white"),
                     Text(f"{icon} {item.level.value}", style=style),
-                    Text(item.note or "—", style="dim"),
+                    Text(item.note or "-", style="dim"),
                 )
 
             console.print(
