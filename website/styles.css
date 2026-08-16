@@ -262,18 +262,22 @@ h2 {
 .float-left  { top: 80px; left: 2%; transform: rotate(-5deg); }
 .float-right { top: 55px; right: 2%; transform: rotate(4deg); }
 
-/* Decorative rings */
-.hero-rings {
+/* Decorative Concentric Rings */
+.hero-rings, .section-rings {
   position: absolute;
-  width: 260px;
-  height: 260px;
-  border: 3px solid #1a2d1d;
+  width: 320px;
+  height: 320px;
+  border: 2px solid rgba(112, 223, 127, 0.18);
   border-radius: 50%;
-  opacity: .5;
-  background: repeating-radial-gradient(circle, transparent 0 14px, #1a2d1d 15px 17px);
+  opacity: .55;
+  background: repeating-radial-gradient(circle, transparent 0 16px, rgba(112, 223, 127, 0.09) 17px 20px);
+  pointer-events: none;
+  z-index: 1;
 }
-.rings-left  { bottom: 100px; left: -130px; }
-.rings-right { top: 120px;   right: -130px; }
+.rings-left  { top: 50%; left: -150px; transform: translateY(-50%); }
+.rings-right { top: 50%; right: -150px; transform: translateY(-50%); }
+.hero-rings.rings-left { bottom: 100px; left: -130px; top: auto; transform: none; }
+.hero-rings.rings-right { top: 120px; right: -130px; transform: none; }
 
 /* ── Terminal window ─────────────────────────────────────────────── */
 .terminal-window {
