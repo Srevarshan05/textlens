@@ -57,8 +57,8 @@
           </div>
           <div class="install-pill">
             <span class="terminal-dot"></span>
-            <code>pip install "textlens-srevarshan[inference,ui]"</code>
-            <button class="copy-button" data-copy='pip install "textlens-srevarshan[inference,ui]"'>Copy</button>
+            <code>pip install "textlens-ocr[inference,ui]"</code>
+            <button class="copy-button" data-copy='pip install "textlens-ocr[inference,ui]"'>Copy</button>
           </div>
         </div>
         <div class="hero-stage container">
@@ -151,174 +151,143 @@ text = ocr.read(<span class="t-green">"invoice.pdf"</span>)
         <div class="container cli-inner">
           <div class="cli-copy reveal-left">
             <p class="section-kicker">POWERFUL CLI</p>
-            <h2 style="font-size:clamp(30px,3.5vw,48px);letter-spacing:-2.5px;line-height:1.08;margin:0 0 14px">Everything you need<br />from the terminal</h2>
-            <p>TextLens comes with a rich developer CLI for hardware diagnostics, live model discovery, inference, batch jobs, and REST serving.</p>
-            
+            <h2 style="font-size:clamp(30px,3.5vw,50px);letter-spacing:-2.5px;line-height:1.08;margin:0 0 16px">Everything you need<br />from the terminal</h2>
+            <p>TextLens comes with a rich CLI for model management, hardware diagnostics, live model discovery, batch processing, and serving &mdash; all from a single command</p>
             <div class="cli-commands" id="cli-cmds">
               <!-- models -->
-              <div class="cli-cmd active" data-tab="models" data-cmd="textlens models">
-                <div class="cli-cmd-progress"></div>
+              <div class="cli-cmd active" data-tab="models">
                 <div class="cli-cmd-icon">
+                  <!-- Phosphor: Rows icon -->
                   <svg width="18" height="18" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="32" y="56" width="192" height="40" rx="8" fill="#70df7f" fill-opacity=".9"/><rect x="32" y="112" width="192" height="40" rx="8" fill="#70df7f" fill-opacity=".55"/><rect x="32" y="168" width="192" height="40" rx="8" fill="#70df7f" fill-opacity=".3"/></svg>
                 </div>
                 <div class="cli-cmd-text">
-                  <div class="cli-cmd-name">
-                    <span>textlens models</span>
-                    <span class="cli-cmd-tag">catalog</span>
-                  </div>
-                  <div class="cli-cmd-desc">List verified models with VRAM &amp; install status</div>
+                  <div class="cli-cmd-name">textlens models</div>
+                  <div class="cli-cmd-desc">List supported models with VRAM and install status</div>
                 </div>
               </div>
-
               <!-- doctor -->
-              <div class="cli-cmd" data-tab="doctor" data-cmd="textlens doctor">
-                <div class="cli-cmd-progress"></div>
+              <div class="cli-cmd" data-tab="doctor">
                 <div class="cli-cmd-icon">
+                  <!-- Phosphor: CPU icon -->
                   <svg width="18" height="18" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="64" y="64" width="128" height="128" rx="16" stroke="#70df7f" stroke-width="16"/><rect x="96" y="96" width="64" height="64" rx="6" fill="#70df7f" fill-opacity=".7"/><line x1="96" y1="32" x2="96" y2="64" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="128" y1="32" x2="128" y2="64" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="160" y1="32" x2="160" y2="64" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="96" y1="192" x2="96" y2="224" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="128" y1="192" x2="128" y2="224" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="160" y1="192" x2="160" y2="224" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="32" y1="96" x2="64" y2="96" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="32" y1="128" x2="64" y2="128" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="32" y1="160" x2="64" y2="160" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="192" y1="96" x2="224" y2="96" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="192" y1="128" x2="224" y2="128" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="192" y1="160" x2="224" y2="160" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/></svg>
                 </div>
                 <div class="cli-cmd-text">
-                  <div class="cli-cmd-name">
-                    <span>textlens doctor</span>
-                    <span class="cli-cmd-tag">telemetry</span>
-                  </div>
-                  <div class="cli-cmd-desc">Inspect GPU, CUDA, VRAM &amp; hardware fit</div>
+                  <div class="cli-cmd-name">textlens doctor</div>
+                  <div class="cli-cmd-desc">Inspect GPU, CUDA, VRAM and get model recommendations</div>
                 </div>
               </div>
-
               <!-- discover -->
-              <div class="cli-cmd" data-tab="discover" data-cmd="textlens discover GLM-OCR --compatible-only">
-                <div class="cli-cmd-progress"></div>
+              <div class="cli-cmd" data-tab="discover">
                 <div class="cli-cmd-icon">
+                  <!-- Phosphor: MagnifyingGlass icon -->
                   <svg width="18" height="18" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="112" cy="112" r="74" stroke="#70df7f" stroke-width="16"/><line x1="163" y1="163" x2="224" y2="224" stroke="#70df7f" stroke-width="16" stroke-linecap="round"/></svg>
                 </div>
                 <div class="cli-cmd-text">
-                  <div class="cli-cmd-name">
-                    <span>textlens discover</span>
-                    <span class="cli-cmd-tag">huggingface</span>
-                  </div>
-                  <div class="cli-cmd-desc">Live search HF models matching your GPU</div>
+                  <div class="cli-cmd-name">textlens discover</div>
+                  <div class="cli-cmd-desc">Search Hugging Face live for compatible OCR models</div>
                 </div>
               </div>
-
               <!-- read -->
-              <div class="cli-cmd" data-tab="read" data-cmd="textlens read invoice.png --model glm-ocr">
-                <div class="cli-cmd-progress"></div>
+              <div class="cli-cmd" data-tab="read">
                 <div class="cli-cmd-icon">
+                  <!-- Phosphor: FileText icon -->
                   <svg width="18" height="18" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M152 32H56a16 16 0 0 0-16 16v160a16 16 0 0 0 16 16h144a16 16 0 0 0 16-16V88Z" stroke="#70df7f" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><polyline points="152,32 152,88 216,88" stroke="#70df7f" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="96" y1="136" x2="160" y2="136" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/><line x1="96" y1="168" x2="160" y2="168" stroke="#70df7f" stroke-width="14" stroke-linecap="round"/></svg>
                 </div>
                 <div class="cli-cmd-text">
-                  <div class="cli-cmd-name">
-                    <span>textlens read</span>
-                    <span class="cli-cmd-tag">ocr</span>
-                  </div>
-                  <div class="cli-cmd-desc">Run instant OCR on image or PDF document</div>
+                  <div class="cli-cmd-name">textlens read</div>
+                  <div class="cli-cmd-desc">Run OCR on any image or PDF from the command line</div>
                 </div>
               </div>
-
               <!-- batch -->
-              <div class="cli-cmd" data-tab="batch" data-cmd="textlens batch ./documents --model glm-ocr --workers 1">
-                <div class="cli-cmd-progress"></div>
+              <div class="cli-cmd" data-tab="batch">
                 <div class="cli-cmd-icon">
+                  <!-- Phosphor: Lightning icon -->
                   <svg width="18" height="18" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="152,16 48,144 120,144 104,240 208,112 136,112" fill="#70df7f" fill-opacity=".85"/></svg>
                 </div>
                 <div class="cli-cmd-text">
-                  <div class="cli-cmd-name">
-                    <span>textlens batch</span>
-                    <span class="cli-cmd-tag">scale</span>
-                  </div>
-                  <div class="cli-cmd-desc">Process folder with retry queue &amp; live dashboard</div>
+                  <div class="cli-cmd-name">textlens batch</div>
+                  <div class="cli-cmd-desc">Batch process a folder with parallel workers and live dashboard</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Right Terminal Panel -->
           <div class="cli-panel reveal-right">
             <div class="cli-panel-bar">
               <span></span><span></span><span></span>
-              <div class="cli-panel-path">
-                <span style="opacity:0.5">~/textlens-workspace &rsaquo;</span>
-                <span id="cli-bar-label" style="color:var(--text);font-weight:700">textlens models</span>
-              </div>
-              <button class="cli-panel-copy-btn" id="cli-copy-btn" title="Copy command">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                <span>Copy</span>
-              </button>
+              <p id="cli-bar-label">textlens models</p>
             </div>
-            
             <div class="cli-output">
               <!-- models tab -->
-              <div class="cli-tab active" id="tab-models">
-                <div class="prompt-line"><span class="prompt-prefix">user@gpu:~$</span> textlens models</div>
-<span class="g">&#10003;</span> <span class="w">TextLens &mdash; Verified Model Catalog</span>
+              <div class="cli-tab active" id="tab-models"><span class="g">&#10003;</span> <span class="w">TextLens — Official Supported Models</span>
 
-<span class="b">MODEL ID          </span>  <span class="b">HF REPOSITORY                    </span>  <span class="b">PARAMS</span>  <span class="b">VRAM </span>  <span class="b">STATUS</span>
-<span class="d">────────────────────────────────────────────────────────────────────────────</span>
-<span class="g">&#10003;</span> <span class="w">glm-ocr</span> <span class="g">[Default]</span>  zai-org/GLM-OCR                    0.9B    6 GB   <span class="g">Ready</span>
-<span class="g">&#10003;</span> <span class="w">lighton-ocr      </span>  lightonai/LightOnOCR-2-1B          1B      8 GB   <span class="d">Cached</span>
-<span class="g">&#10003;</span> <span class="w">hunyuan-ocr      </span>  tencent/HunyuanOCR                 ~1B     8 GB   <span class="d">Online</span>
-<span class="g">&#10003;</span> <span class="w">smolvlm          </span>  HuggingFaceTB/SmolVLM-256M         256M    2 GB   <span class="g">Ready</span>
+  <span class="b">Model ID          </span>  <span class="b">HF Repo                          </span>  <span class="b">Params</span>  <span class="b">VRAM </span>
+  <span class="d">──────────────────────────────────────────────────────────────────</span>
+  <span class="g">&#10003;</span> <span class="w">glm-ocr</span> <span class="g">[Default]</span>  zai-org/GLM-OCR                    0.9B    6 GB
+  <span class="g">&#10003;</span> <span class="w">lighton-ocr      </span>  lightonai/LightOnOCR-2-1B          1B      8 GB
+  <span class="g">&#10003;</span> <span class="w">hunyuan-ocr      </span>  tencent/HunyuanOCR                 ~1B     8 GB
+  <span class="g">&#10003;</span> <span class="w">smolvlm          </span>  HuggingFaceTB/SmolVLM-256M         256M    2 GB
 
-<span class="d">Use</span> <span class="g">OCR(model='glm-ocr')</span> <span class="d">in Python or</span> <span class="g">textlens read &lt;file&gt;</span><span class="cursor-blink"></span></div>
+  <span class="d">Use</span> <span class="g">OCR(model='&lt;Model ID&gt;')</span> <span class="d">to use a model</span>
+  <span class="d">Use</span> <span class="g">textlens model install &lt;id&gt;</span> <span class="d">to download</span></div>
 
               <!-- doctor tab -->
-              <div class="cli-tab" id="tab-doctor">
-                <div class="prompt-line"><span class="prompt-prefix">user@gpu:~$</span> textlens doctor</div>
-<span class="g">&#10003;</span> <span class="w">Hardware Diagnostics Complete (1.42s)</span>
+              <div class="cli-tab" id="tab-doctor"><span class="pr">$</span> textlens doctor
 
-  <span class="b">GPU    </span>  NVIDIA GeForce RTX 4050 Laptop GPU
-  <span class="b">VRAM   </span>  <span class="g">6.0 GB Available (Dedicated GDDR6)</span>
-  <span class="b">CUDA   </span>  <span class="g">&#10003; Active &middot; PyTorch 2.4.0+cu124</span>
-  <span class="b">DRIVER </span>  555.99 (CUDA 12.5 Supported)
-  <span class="b">SYSTEM </span>  16 GB RAM &middot; Intel Core i7-13650HX
+  <span class="b">GPU   </span>  NVIDIA GeForce RTX 4050 Laptop GPU
+  <span class="b">VRAM  </span>  <span class="g">6.0 GB available</span>
+  <span class="b">CUDA  </span>  <span class="g">&#10003; Available &middot; PyTorch 2.4.0+cu124</span>
+  <span class="b">CPU   </span>  Intel Core i7-13650HX
+  <span class="b">RAM   </span>  16 GB
 
-<span class="w">Compatible Model Recommendations:</span>
-  <span class="g">&#10003;</span> <span class="w">glm-ocr</span>     <span class="g">Compatible &middot; Fits in 6 GB VRAM</span>
-  <span class="g">&#10003;</span> <span class="w">smolvlm</span>     <span class="g">Ultra-Fast &middot; Fits in 2 GB VRAM</span>
-  <span class="y">!</span> <span class="w">lighton-ocr</span> <span class="y">Requires 8 GB VRAM (Warning)</span><span class="cursor-blink"></span></div>
+  <span class="w">Model recommendations:</span>
+    <span class="g">&#10003;</span>  glm-ocr    <span class="d">— compatible (needs 6 GB)</span>
+    <span class="g">&#10003;</span>  smolvlm    <span class="d">— compatible (needs 2 GB)</span>
+    <span class="y">!</span>  lighton-ocr <span class="d">— needs 8 GB VRAM</span>
+    <span class="y">!</span>  hunyuan-ocr <span class="d">— needs 8 GB VRAM</span></div>
 
               <!-- discover tab -->
-              <div class="cli-tab" id="tab-discover">
-                <div class="prompt-line"><span class="prompt-prefix">user@gpu:~$</span> textlens discover GLM-OCR --compatible-only</div>
-<span class="d">Fetching verified VLM architectures from Hugging Face Hub...</span>
-<span class="d">Local Target:</span> <span class="g">NVIDIA RTX 4050 (6.0 GB VRAM)</span>
+              <div class="cli-tab" id="tab-discover"><span class="pr">$</span> textlens discover GLM-OCR --compatible-only
 
-<span class="b">REPOSITORY                 </span>  <span class="b">PARAMS</span>  <span class="b">REQ VRAM</span>  <span class="b">HARDWARE FIT</span>
-<span class="d">─────────────────────────────────────────────────────────────────</span>
-<span class="g">&#10003;</span> zai-org/GLM-OCR             0.9B    ~6.0 GB   <span class="g">&#10003; Fully Compatible</span>
-<span class="g">&#10003;</span> zai-org/GLM-OCR-v1.1        0.9B    ~6.0 GB   <span class="g">&#10003; Fully Compatible</span>
-<span class="d">&bull;</span> zai-org/GLM-OCR-INT4        0.9B    ~3.2 GB   <span class="g">&#10003; Lightweight</span>
+  <span class="d">Detected:</span> <span class="g">NVIDIA RTX 4050 (6 GB VRAM)</span>
 
-<span class="d">Results cached locally for 15 min. Use --refresh for live API query.</span><span class="cursor-blink"></span></div>
+  <span class="b">Repository              </span>  <span class="b">Params</span>  <span class="b">VRAM    </span>  <span class="b">Hardware fit</span>
+  <span class="d">─────────────────────────────────────────────────────────</span>
+  <span class="g">&#10003;</span> zai-org/GLM-OCR          0.9B    ~6 GB     <span class="g">Compatible</span>
+  <span class="g">&#10003;</span> zai-org/GLM-OCR-v1.1     0.9B    ~6 GB     <span class="g">Compatible</span>
+
+  <span class="d">Note: Live candidates are research suggestions.</span>
+  <span class="d">Results cached for 15 min. Use --refresh for live data.</span></div>
 
               <!-- read tab -->
-              <div class="cli-tab" id="tab-read">
-                <div class="prompt-line"><span class="prompt-prefix">user@gpu:~$</span> textlens read invoice.png --model glm-ocr</div>
-<span class="d">[TextLens] Loading GLM-OCR on cuda:0...</span>
-<span class="g">&#10003;</span> Model weights ready in <span class="w">4.12s</span>
+              <div class="cli-tab" id="tab-read"><span class="pr">$</span> textlens read invoice.png --model glm-ocr
 
-<span class="w">=== EXTRACTED OCR RESULT ===</span>
-<span class="b">Invoice Number :</span> #INV-2026-0891
-<span class="b">Issue Date     :</span> August 16, 2026
-<span class="b">Customer       :</span> Srevarshan Subramanian
-<span class="b">Total Due      :</span> $3,450.00 USD
-<span class="b">Payment Status :</span> PAID VIA WIRE TRANSFER
+  <span class="d">Loading</span> <span class="g">glm-ocr</span> <span class="d">on</span> <span class="g">cuda:0</span><span class="d">...</span>
+  <span class="g">&#10003;</span> Model ready <span class="d">(5.3s)</span>
 
-<span class="d">─────────────────────────────────────────────────</span>
-<span class="g">&#10003; Done:</span> 488 characters extracted in 0.84s (CUDA)<span class="cursor-blink"></span></div>
+  <span class="w">Invoice #1042</span>
+  <span class="w">Date: 2024-08-01</span>
+  <span class="w">Bill To: Srevarshan Subramanian</span>
+  <span class="w">Amount: $1,200.00</span>
+  <span class="w">Status: Paid</span>
+
+  <span class="d">─────────────────</span>
+  <span class="g">&#10003;</span> OCR complete &middot; 312 chars &middot; 4.2s</div>
 
               <!-- batch tab -->
-              <div class="cli-tab" id="tab-batch">
-                <div class="prompt-line"><span class="prompt-prefix">user@gpu:~$</span> textlens batch ./documents --model glm-ocr --workers 1</div>
-<span class="d">[TextLens BatchOCR] Initializing parallel document queue...</span>
-<span class="g">&#10003;</span> Discovered <span class="w">24 files</span> in ./documents (18 PDF, 6 PNG)
-<span class="g">&#10003;</span> Live Web Dashboard active at <span class="g">http://localhost:8765</span>
+              <div class="cli-tab" id="tab-batch"><span class="pr">$</span> textlens batch ./documents --model glm-ocr --workers 1
 
-<span class="b">PROGRESS:</span> <span class="g">[████████████████░░░░]</span> <span class="w">18/24 (75%)</span> &middot; <span class="g">3.2 doc/s</span>
-  <span class="g">&#10003;</span> invoice_q3.pdf        <span class="d">&rarr; 1,420 chars (0.62s)</span>
-  <span class="g">&#10003;</span> technical_spec.pdf    <span class="d">&rarr; 3,890 chars (1.10s)</span>
-  <span class="g">&#10003;</span> scan_receipt.png      <span class="d">&rarr;   620 chars (0.34s)</span>
-<span class="d">Manifest saved &rarr; ./batch_output/manifest.json</span><span class="cursor-blink"></span></div>
+  <span class="d">Scanning</span> <span class="w">./documents</span> <span class="d">for supported files...</span>
+  <span class="g">&#10003;</span> Found <span class="w">24 files</span> <span class="d">(18 PDF, 6 PNG)</span>
+
+  <span class="d">Dashboard:</span>  <span class="g">http://localhost:8765</span>
+  <span class="d">Output:    </span>  <span class="g">./batch_output/</span>
+
+  <span class="b">[██████████░░░░░░░░░░]</span> <span class="w">12/24</span> <span class="d">files</span>
+  <span class="g">&#10003;</span> invoice_01.pdf   <span class="d">→ 1,284 chars (3.1s)</span>
+  <span class="g">&#10003;</span> receipt_q3.pdf   <span class="d">→ 892 chars  (2.8s)</span>
+  <span class="y">&#8635;</span> contract_v2.pdf  <span class="d">retrying (1/2)...</span>
+  <span class="g">&#10003;</span> scan_aug.png     <span class="d">→ 2,104 chars (3.4s)</span></div>
             </div>
           </div>
         </div>
@@ -341,8 +310,8 @@ text = ocr.read(<span class="t-green">"invoice.pdf"</span>)
                 <div class="terminal-window compact" style="position:relative">
                   <div class="terminal-bar"><span></span><span></span><span></span></div>
                   <pre><code><span class="t-comment"># OCR + dashboard tools</span>
-pip install <span class="t-green">"textlens-srevarshan[inference,ui]"</span></code></pre>
-                  <button class="copy-button corner-copy" data-copy='pip install "textlens-srevarshan[inference,ui]"'>Copy</button>
+pip install <span class="t-green">"textlens-ocr[inference,ui]"</span></code></pre>
+                  <button class="copy-button corner-copy" data-copy='pip install "textlens-ocr[inference,ui]"'>Copy</button>
                 </div>
               </div>
             </article>

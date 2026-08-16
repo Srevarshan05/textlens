@@ -1,11 +1,9 @@
-/* ═══════════════════════════════════════════════════════════════════
-   TextLens — app.js   (Interactive CLI Engine & UI Controls)
-   ═══════════════════════════════════════════════════════════════════ */
+/* ── TextLens — app.js ──────────────────────────────────────────── */
 
-/* Enable JS animations class */
+/* Mark <html> so CSS reveal animations can activate */
 document.documentElement.classList.add('js');
 
-/* ── Scroll Reveal via IntersectionObserver ──────────────────────── */
+/* ── Scroll reveal (IntersectionObserver) ──────────────────────── */
 (function () {
   const targets = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .stagger');
   if (!targets.length) return;
@@ -15,17 +13,17 @@ document.documentElement.classList.add('js');
       entries.forEach((e) => {
         if (e.isIntersecting) {
           e.target.classList.add('in-view');
-          io.unobserve(e.target);
+          io.unobserve(e.target); // fire once
         }
       });
     },
-    { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    { threshold: 0.12, rootMargin: '0px 0px -48px 0px' }
   );
 
   targets.forEach((el) => io.observe(el));
 })();
 
-/* ── Mobile Navigation Toggle ────────────────────────────────────── */
+/* ── Mobile navigation toggle ───────────────────────────────────── */
 (function () {
   const btn = document.querySelector('.menu-button');
   const nav = document.querySelector('.nav-links');
@@ -36,6 +34,7 @@ document.documentElement.classList.add('js');
     btn.setAttribute('aria-expanded', String(open));
   });
 
+  /* Close on link click */
   nav.querySelectorAll('a').forEach((a) =>
     a.addEventListener('click', () => {
       nav.classList.remove('is-open');
@@ -44,7 +43,7 @@ document.documentElement.classList.add('js');
   );
 })();
 
-/* ── General Copy Buttons ────────────────────────────────────────── */
+/* ── Copy-to-clipboard buttons ──────────────────────────────────── */
 (function () {
   document.querySelectorAll('.copy-button[data-copy]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -53,148 +52,93 @@ document.documentElement.classList.add('js');
         .then(() => {
           const original = btn.textContent;
           btn.textContent = 'Copied!';
-          btn.style.background = '#70df7f';
-          btn.style.color = '#060a06';
-          setTimeout(() => {
-            btn.textContent = original;
-            btn.style.background = '';
-            btn.style.color = '';
-          }, 1600);
+          setTimeout(() => (btn.textContent = original), 1600);
         })
         .catch(() => {});
     });
   });
 })();
 
-/* ── CLI Showcase Interactive Tab Engine ─────────────────────────── */
+/* ── CLI showcase interactive tab switcher ──────────────────────── */
 (function () {
-  const cmds       = document.querySelectorAll('.cli-cmd');
-  const tabs       = document.querySelectorAll('.cli-tab');
-  const barLabel   = document.getElementById('cli-bar-label');
-  const copyBtn    = document.getElementById('cli-copy-btn');
-  const cliSection = document.getElementById('cli-section');
-  if (!cmds.length || !tabs.length) return;
+  const cmds      = document.querySelectorAll('.cli-cmd');
+  const tabs      = document.querySelectorAll('.cli-tab');
+  const barLabel  = document.getElementById('cli-bar-label');
+  if (!cmds.length) return;
 
-  const tabOrder = ['models', 'doctor', 'discover', 'read', 'batch'];
-  let activeIndex = 0;
-  let cycleTimer = null;
-  let isUserInteracted = false;
-
-  const commandMap = {
+  const labels = {
     models:   'textlens models',
     doctor:   'textlens doctor',
-    discover: 'textlens discover GLM-OCR --compatible-only',
-    read:     'textlens read invoice.png --model glm-ocr',
-    batch:    'textlens batch ./documents --model glm-ocr --workers 1',
+    discover: 'textlens discover',
+    read:     'textlens read invoice.png',
+    batch:    'textlens batch ./documents',
   };
 
-  function activateTab(tabId, manual = false) {
-    if (manual) isUserInteracted = true;
-
-    // Update command buttons
-    cmds.forEach((c) => {
-      c.classList.remove('active');
-      const prog = c.querySelector('.cli-cmd-progress');
-      if (prog) {
-        prog.style.transition = 'none';
-        prog.style.width = '0%';
-      }
-    });
-
+  function activate(tabId) {
+    /* Buttons */
+    cmds.forEach((c) => c.classList.remove('active'));
     const activeCmd = document.querySelector(`.cli-cmd[data-tab="${tabId}"]`);
-    if (activeCmd) {
-      activeCmd.classList.add('active');
-      // Trigger smooth CSS progress bar animation
-      const prog = activeCmd.querySelector('.cli-cmd-progress');
-      if (prog && !isUserInteracted) {
-        requestAnimationFrame(() => {
-          prog.style.transition = 'width 4.5s linear';
-          prog.style.width = '100%';
-        });
-      }
-    }
+    if (activeCmd) activeCmd.classList.add('active');
 
-    // Update output panels
+    /* Output panels */
     tabs.forEach((t) => t.classList.remove('active'));
     const activeTab = document.getElementById(`tab-${tabId}`);
     if (activeTab) activeTab.classList.add('active');
 
-    // Update terminal top bar label
-    const cmdStr = commandMap[tabId] || tabId;
-    if (barLabel) barLabel.textContent = cmdStr;
-    activeIndex = tabOrder.indexOf(tabId);
+    /* Bar label */
+    if (barLabel) barLabel.textContent = labels[tabId] || tabId;
   }
 
-  // Click listeners for each card
   cmds.forEach((cmd) => {
-    cmd.addEventListener('click', () => {
-      stopAutoCycle();
-      activateTab(cmd.dataset.tab, true);
-    });
+    cmd.addEventListener('click', () => activate(cmd.dataset.tab));
   });
 
-  // Terminal header copy button
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
-      const currentTab = tabOrder[activeIndex];
-      const cmdToCopy = commandMap[currentTab] || 'textlens';
-      navigator.clipboard.writeText(cmdToCopy).then(() => {
-        const textSpan = copyBtn.querySelector('span');
-        if (textSpan) {
-          const orig = textSpan.textContent;
-          textSpan.textContent = 'Copied!';
-          copyBtn.style.color = '#70df7f';
-          setTimeout(() => {
-            textSpan.textContent = orig;
-            copyBtn.style.color = '';
-          }, 1500);
-        }
-      });
-    });
+  /* Auto-cycle every 4 seconds when section is visible */
+  const tabOrder = ['models', 'doctor', 'discover', 'read', 'batch'];
+  let idx = 0;
+  let timer = null;
+
+  function startCycle() {
+    if (timer) return;
+    timer = setInterval(() => {
+      idx = (idx + 1) % tabOrder.length;
+      activate(tabOrder[idx]);
+    }, 4000);
   }
 
-  // Auto-cycle logic
-  function nextTab() {
-    if (isUserInteracted) return;
-    activeIndex = (activeIndex + 1) % tabOrder.length;
-    activateTab(tabOrder[activeIndex]);
+  function stopCycle() {
+    clearInterval(timer);
+    timer = null;
   }
 
-  function startAutoCycle() {
-    if (cycleTimer || isUserInteracted) return;
-    activateTab(tabOrder[activeIndex]);
-    cycleTimer = setInterval(nextTab, 4800);
-  }
-
-  function stopAutoCycle() {
-    if (cycleTimer) {
-      clearInterval(cycleTimer);
-      cycleTimer = null;
-    }
-  }
-
+  const cliSection = document.getElementById('cli-section');
   if (cliSection) {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          startAutoCycle();
-        } else {
-          stopAutoCycle();
-        }
+    const sectionObs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) startCycle();
+        else stopCycle();
       },
       { threshold: 0.3 }
     );
-    observer.observe(cliSection);
+    sectionObs.observe(cliSection);
   }
+
+  /* Stop auto-cycle on manual click */
+  cmds.forEach((cmd) => {
+    cmd.addEventListener('click', () => {
+      stopCycle();
+      idx = tabOrder.indexOf(cmd.dataset.tab);
+    });
+  });
 })();
 
-/* ── FAQ Details Toggle Animation ────────────────────────────────── */
+/* ── FAQ smooth toggle ──────────────────────────────────────────── */
 (function () {
   document.querySelectorAll('details').forEach((d) => {
     d.addEventListener('toggle', () => {
       if (d.open) {
         d.querySelectorAll('p').forEach((p) => {
-          p.style.animation = 'smoothLineReveal .3s ease both';
+          p.style.animation = 'fadeSlideIn .3s ease both';
         });
       }
     });

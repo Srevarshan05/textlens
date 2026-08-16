@@ -303,7 +303,7 @@ def discover_models(
     except ImportError as exc:
         raise ImportError(
             "Online model discovery requires the catalog extra. Install with: "
-            'pip install "textlens-srevarshan[catalog]"'
+            'pip install "textlens-ocr[catalog]"'
         ) from exc
 
     try:

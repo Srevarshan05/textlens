@@ -1,7 +1,7 @@
 """Find live Hugging Face OCR/VLM candidates that match this computer.
 
 Install the small discovery dependency first:
-    python -m pip install "textlens-srevarshan[catalog]"
+    python -m pip install "textlens-ocr[catalog]"
 
 This does not download models or make a repository an officially supported
 TextLens backend. It is a research aid before choosing or integrating a model.
