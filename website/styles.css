@@ -340,6 +340,22 @@ pre { padding: 20px 22px; font: 13px/1.85 var(--mono); white-space: pre-wrap; ov
 }
 .icon-dark { background: #0c1509; }
 
+/* Text links */
+.text-link {
+  color: var(--lime);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color .2s, transform .2s;
+}
+.text-link:hover {
+  color: #fff;
+  transform: translateX(4px);
+}
+
 /* ── CLI SHOWCASE (2-Column Side-by-Side) ────────────────────────── */
 .cli-section {
   background: var(--bg);
@@ -348,8 +364,8 @@ pre { padding: 20px 22px; font: 13px/1.85 var(--mono); white-space: pre-wrap; ov
 .cli-inner {
   display: grid;
   grid-template-columns: 1fr 1.15fr;
-  gap: 70px;
-  align-items: start;
+  gap: 40px;
+  align-items: stretch;
 }
 .cli-copy p:not(.section-kicker) {
   color: var(--muted);
