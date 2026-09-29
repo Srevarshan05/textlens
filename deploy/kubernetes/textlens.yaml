@@ -1,0 +1,63 @@
+# Reference Kubernetes deployment (CPU tier). Starting point, not a turnkey
+# production chart: add your ingress/gateway, TLS, and secret management.
+#
+#   kubectl create secret generic textlens-api-keys --from-literal=keys=change-me
+#   kubectl apply -f deploy/kubernetes/textlens.yaml
+#
+# Scale-out model: stateless API pods each run inference (workers per pod).
+# For GPU pods add `nvidia.com/gpu: 1` limits and a GPU node selector;
+# for queue-based scaling see docs/production/scaling.md.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: textlens
+  labels: { app: textlens }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: textlens } }
+  template:
+    metadata:
+      labels: { app: textlens }
+      annotations: { prometheus.io/scrape: "true", prometheus.io/port: "8000", prometheus.io/path: /metrics }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001 }
+      containers:
+        - name: textlens
+          image: textlens:cpu
+          args: ["serve", "--warmup"]
+          ports: [{ containerPort: 8000, name: http }]
+          env:
+            - { name: TEXTLENS_PROFILE, value: fast }
+            - { name: TEXTLENS_WORKERS, value: "2" }
+            - { name: TEXTLENS_MAX_QUEUE, value: "32" }
+            - { name: TEXTLENS_NO_PERSIST, value: "1" }
+            - name: TEXTLENS_API_KEYS
+              valueFrom: { secretKeyRef: { name: textlens-api-keys, key: keys } }
+          resources:
+            requests: { cpu: "2", memory: 1Gi }
+            limits: { cpu: "4", memory: 3Gi }
+          readinessProbe: { httpGet: { path: /ready, port: http }, periodSeconds: 10, failureThreshold: 3 }
+          livenessProbe: { httpGet: { path: /health, port: http }, periodSeconds: 20, initialDelaySeconds: 20 }
+          securityContext: { readOnlyRootFilesystem: true, allowPrivilegeEscalation: false }
+          volumeMounts: [{ name: tmp, mountPath: /tmp }, { name: data, mountPath: /data }]
+      volumes:
+        - { name: tmp, emptyDir: {} }
+        - { name: data, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: textlens }
+spec:
+  selector: { app: textlens }
+  ports: [{ port: 80, targetPort: http, name: http }]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: { name: textlens }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: textlens }
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }

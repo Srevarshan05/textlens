@@ -1,0 +1,74 @@
+# TextLens reference stack.
+#
+#   docker compose -f deploy/docker/docker-compose.yml up                    # CPU API on :8000
+#   docker compose -f deploy/docker/docker-compose.yml --profile gpu up      # GPU API on :8001
+#   docker compose -f deploy/docker/docker-compose.yml --profile served up   # + vLLM serving PaddleOCR-VL
+#
+# Set TEXTLENS_API_KEYS in a .env file next to this file before exposing ports.
+
+name: textlens
+
+x-textlens-env: &textlens-env
+  TEXTLENS_API_KEYS: ${TEXTLENS_API_KEYS:-}
+  TEXTLENS_MAX_UPLOAD_MB: ${TEXTLENS_MAX_UPLOAD_MB:-50}
+  TEXTLENS_WORKERS: ${TEXTLENS_WORKERS:-1}
+  TEXTLENS_MAX_QUEUE: ${TEXTLENS_MAX_QUEUE:-64}
+  TEXTLENS_RATE_LIMIT: ${TEXTLENS_RATE_LIMIT:-0}
+  TEXTLENS_NO_PERSIST: ${TEXTLENS_NO_PERSIST:-1}
+
+services:
+  textlens:
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile }
+    image: textlens:cpu
+    ports: ["8000:8000"]
+    environment:
+      <<: *textlens-env
+      TEXTLENS_PROFILE: ${TEXTLENS_PROFILE:-fast}
+    volumes: [models:/models, data:/data]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+
+  textlens-gpu:
+    profiles: [gpu]
+    build: { context: ../.., dockerfile: deploy/docker/Dockerfile.gpu }
+    image: textlens:gpu
+    ports: ["8001:8000"]
+    environment:
+      <<: *textlens-env
+      TEXTLENS_PROFILE: balanced
+    volumes: [models:/models, data:/data]
+    deploy:
+      resources:
+        reservations:
+          devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
+    restart: unless-stopped
+
+  # A heavyweight document VLM behind vLLM; TextLens routes to it as the
+  # "server" tier and keeps selective OCR, validation and the result schema.
+  vllm:
+    profiles: [served]
+    image: vllm/vllm-openai:latest
+    command: ["--model", "PaddlePaddle/PaddleOCR-VL", "--trust-remote-code", "--max-num-seqs", "64"]
+    volumes: [hf-cache:/root/.cache/huggingface]
+    deploy:
+      resources:
+        reservations:
+          devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
+
+  textlens-served:
+    profiles: [served]
+    image: textlens:cpu
+    depends_on: [vllm]
+    ports: ["8002:8000"]
+    environment:
+      <<: *textlens-env
+      TEXTLENS_PROFILE: server
+      TEXTLENS_OPENAI_BASE_URL: http://vllm:8000/v1
+      TEXTLENS_WORKERS: 8
+    volumes: [models:/models, data:/data]
+
+volumes:
+  models: {}
+  data: {}
+  hf-cache: {}

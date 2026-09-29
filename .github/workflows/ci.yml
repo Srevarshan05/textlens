@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.12", "3.13"]
+    env:
+      TEXTLENS_TEST_MODELS_DIR: ${{ github.workspace }}/.models
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.python }}", cache: pip }
+      - run: pip install -e ".[dev,documents]"
+      - name: Cache PP-OCRv6 weights
+        uses: actions/cache@v4
+        with: { path: .models, key: ppocrv6-small-oar-ocr-v0.7.0 }
+      - name: Install default model (SHA-256 verified)
+        run: textlens models install ppocrv6-small
+        env: { TEXTLENS_MODELS_DIR: ${{ github.workspace }}/.models }
+      - run: pytest -q
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ruff
+      - run: ruff check textlens --select F,E9 --output-format github
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install build && python -m build
+      - name: Install wheel in a clean venv and smoke-test the CLI
+        run: |
+          python -m venv /tmp/clean && /tmp/clean/bin/pip install dist/*.whl
+          /tmp/clean/bin/textlens --version
+          /tmp/clean/bin/textlens models list --json > /dev/null
+          /tmp/clean/bin/python -c "import sys, textlens; from textlens import OCR; assert 'torch' not in sys.modules"
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f deploy/docker/Dockerfile -t textlens:ci .
+      - run: |
+          docker run -d --name tl -p 8000:8000 textlens:ci
+          for i in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 2; done
+          curl -fs localhost:8000/ready
