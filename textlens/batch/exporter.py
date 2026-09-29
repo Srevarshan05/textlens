@@ -17,7 +17,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 from textlens.batch.types import BatchTask
 
@@ -55,11 +55,12 @@ class StructuredExporter:
             Path to the saved result file.
         """
         fmt = (output_format or self.default_format).lower().strip()
-        stem = task.source_path.stem
-        out_filename = f"{stem}_ocr.{'md' if fmt in ('markdown', 'md') else fmt}"
-        out_path = self.output_dir / out_filename
+        out_path = self.output_path_for(task, fmt)
+        result = getattr(task, "result", None)
 
         text_content = task.result_text or ""
+        if result is not None and fmt in ("markdown", "md"):
+            text_content = result.to_markdown(page_markers=result.page_count > 1)
 
         if fmt == "json":
             data = {
@@ -72,6 +73,9 @@ class StructuredExporter:
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(task.completed_at or time.time())),
                 "text": text_content,
             }
+            if result is not None:
+                data["confidence"] = result.confidence
+                data["result"] = result.to_dict()  # full 2.0 schema: pages, blocks, boxes, provenance
             with open(out_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -93,12 +97,22 @@ class StructuredExporter:
                 writer.writerow(["file_name", "source_path", "model_id", "duration_sec", "text"])
                 writer.writerow([task.source_path.name, str(task.source_path), model_id, f"{task.duration_sec:.3f}", text_content])
 
+        elif fmt == "html" and result is not None:
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write(result.to_html())
+
         else:  # plain txt
             with open(out_path, "w", encoding="utf-8") as f:
                 f.write(text_content + "\n")
 
         task.output_path = out_path
         return out_path
+
+    def output_path_for(self, task: BatchTask, output_format: Optional[str] = None) -> Path:
+        """Deterministic output path for a task (used for resume)."""
+        fmt = (output_format or self.default_format).lower().strip()
+        ext = "md" if fmt in ("markdown", "md") else fmt
+        return self.output_dir / f"{task.source_path.stem}_ocr.{ext}"
 
     def export_summary_manifest(
         self,

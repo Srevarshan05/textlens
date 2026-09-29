@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import os
 import re
-import sys
 import logging
 import subprocess
 import dataclasses
@@ -94,9 +93,8 @@ def detect_system_cuda() -> SystemCUDADetails:
                 gpu_list = ["NVIDIA GPU"]
 
     except Exception:
-        win_smi = r"C:\Windows\System32\DriverStore\FileRepository\nv_dispi.inf_amd64_\nvidia-smi.exe"
-        if os.path.exists(win_smi):
-            smi_path = win_smi
+        # nvidia-smi is not on PATH (no NVIDIA driver, or a minimal container).
+        pass
 
     recommended_cmd = get_pytorch_cuda_install_cmd(cuda_ver)
 

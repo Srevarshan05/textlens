@@ -9,7 +9,6 @@ runs during tests.
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import patch
 
 from textlens.models.doctor import (
@@ -19,6 +18,10 @@ from textlens.models.doctor import (
     _rule_for_model,
 )
 from textlens.models.hardware import HardwareProfile, GPUInfo
+from textlens.models.specs import all_specs
+
+# 2.0: recommendations cover every locally runnable model in the catalog.
+LOCAL_MODEL_COUNT = sum(1 for s in all_specs() if s.runnable_locally)
 
 
 def _make_profile(
@@ -118,13 +121,12 @@ class TestEvaluateRecommendations:
     def test_returns_one_recommendation_per_model(self):
         profile = _make_profile(vram_gb=8.0, cuda=True)
         recs = _evaluate_recommendations(profile)
-        assert len(recs) == 4
+        assert len(recs) == LOCAL_MODEL_COUNT
 
     def test_all_excellent_with_8gb(self):
         profile = _make_profile(vram_gb=8.0, cuda=True)
         recs = _evaluate_recommendations(profile)
-        levels = {r.model.id: r.level for r in recs}
-        # All 6 models should be at least Supported with 8GB
+        # Every local model should be at least Supported with 8GB
         for rec in recs:
             assert rec.level != Recommendation.NOT_RECOMMENDED, (
                 f"{rec.model.id} should not be NOT_RECOMMENDED with 8GB VRAM"
@@ -155,7 +157,7 @@ class TestHardwareDoctor:
             report = doctor.run()
             assert isinstance(report, DoctorReport)
             assert report.profile == profile
-            assert len(report.recommendations) == 4
+            assert len(report.recommendations) == LOCAL_MODEL_COUNT
 
     def test_print_report_does_not_raise(self, capsys):
         from textlens.models.doctor import DoctorReport

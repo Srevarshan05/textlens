@@ -3,7 +3,7 @@ Tests for textlens.sdk module using standard unittest.
 """
 
 import unittest
-from textlens import TextLens, is_cuda_available
+from textlens import TextLens
 
 
 class TestSDK(unittest.TestCase):

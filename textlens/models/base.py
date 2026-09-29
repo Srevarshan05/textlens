@@ -15,7 +15,7 @@ Design Goals
 from __future__ import annotations
 
 import abc
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 from textlens.models.metadata import ModelMetadata
 
