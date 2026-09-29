@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0a1 — 2026-09-29
+## 2.0.0 — 2026-09-29
 
 TextLens 2.0 turns the multi-model OCR wrapper into an OCR infrastructure
 layer. See [docs/migration.md](docs/migration.md) for upgrade notes and

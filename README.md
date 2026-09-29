@@ -7,6 +7,15 @@
 <p align="center"><b>OCR without the OCR complexity.</b><br>
 Read text from images and PDFs with one line of Python — on a laptop, a Raspberry Pi or a GPU server.</p>
 
+<p align="center">
+  <a href="https://pypi.org/project/textlens-ocr/"><img src="https://img.shields.io/pypi/v/textlens-ocr?color=2f9e44" alt="PyPI"></a>
+  <a href="https://pypi.org/project/textlens-ocr/"><img src="https://img.shields.io/pypi/pyversions/textlens-ocr" alt="Python versions"></a>
+  <a href="https://github.com/Srevarshan05/textlens/actions/workflows/ci.yml"><img src="https://github.com/Srevarshan05/textlens/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Srevarshan05/textlens/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+</p>
+
+<p align="center"><a href="https://textlens-website.vercel.app">Website</a> · <a href="https://github.com/Srevarshan05/textlens/tree/main/docs">Documentation</a> · <a href="https://github.com/Srevarshan05/textlens/tree/main/examples">Examples</a> · <a href="https://github.com/Srevarshan05/textlens/blob/main/CHANGELOG.md">Changelog</a></p>
+
 ---
 
 ## Install
@@ -79,10 +88,10 @@ textlens models install glm-ocr
 
 ## Documentation
 
-- [Quickstart](docs/getting-started/quickstart.md) · [Installation](docs/getting-started/installation.md) · [Troubleshooting](docs/getting-started/troubleshooting.md)
-- [How it works](docs/concepts/architecture.md) · [Models](docs/concepts/models.md) · [API reference](docs/API_REFERENCE.md)
-- [PDFs](docs/tasks/pdf.md) · [RAG](docs/tasks/rag.md) · [Edge devices](docs/deployment/edge.md) · [Server](docs/deployment/server.md) · [Docker](docs/deployment/docker.md)
-- [Examples](examples/) · [Upgrading from 0.x](docs/migration.md) · [Changelog](CHANGELOG.md)
+- [Quickstart](https://github.com/Srevarshan05/textlens/blob/main/docs/getting-started/quickstart.md) · [Installation](https://github.com/Srevarshan05/textlens/blob/main/docs/getting-started/installation.md) · [Troubleshooting](https://github.com/Srevarshan05/textlens/blob/main/docs/getting-started/troubleshooting.md)
+- [How it works](https://github.com/Srevarshan05/textlens/blob/main/docs/concepts/architecture.md) · [Models](https://github.com/Srevarshan05/textlens/blob/main/docs/concepts/models.md) · [API reference](https://github.com/Srevarshan05/textlens/blob/main/docs/API_REFERENCE.md)
+- [PDFs](https://github.com/Srevarshan05/textlens/blob/main/docs/tasks/pdf.md) · [RAG](https://github.com/Srevarshan05/textlens/blob/main/docs/tasks/rag.md) · [Edge devices](https://github.com/Srevarshan05/textlens/blob/main/docs/deployment/edge.md) · [Server](https://github.com/Srevarshan05/textlens/blob/main/docs/deployment/server.md) · [Docker](https://github.com/Srevarshan05/textlens/blob/main/docs/deployment/docker.md)
+- [Examples](https://github.com/Srevarshan05/textlens/tree/main/examples/) · [Upgrading from 0.x](https://github.com/Srevarshan05/textlens/blob/main/docs/migration.md) · [Changelog](https://github.com/Srevarshan05/textlens/blob/main/CHANGELOG.md)
 
 ## Development
 
@@ -96,4 +105,4 @@ pytest
 ## License
 
 MIT. OCR models are downloaded separately under their own licenses
-(`textlens models info <model>`). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+(`textlens models info <model>`). See [THIRD_PARTY_NOTICES.md](https://github.com/Srevarshan05/textlens/blob/main/THIRD_PARTY_NOTICES.md).

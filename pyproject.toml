@@ -19,7 +19,7 @@ keywords = [
     "vlm", "glm-ocr", "rag", "anpr", "fastapi", "mcp",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
@@ -75,7 +75,7 @@ gpu-utils = ["GPUtil>=1.4.0"]
 textlens = "textlens.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Srevarshan05/textlens"
+Homepage = "https://textlens-website.vercel.app"
 Documentation = "https://github.com/Srevarshan05/textlens/tree/main/docs"
 Source = "https://github.com/Srevarshan05/textlens"
 Issues = "https://github.com/Srevarshan05/textlens/issues"
