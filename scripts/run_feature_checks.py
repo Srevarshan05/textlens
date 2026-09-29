@@ -3,7 +3,8 @@
 Examples
 --------
 python scripts/run_feature_checks.py
-python scripts/run_feature_checks.py --image test-image-ocr.png --model glm-ocr --device cuda
+python scripts/run_feature_checks.py --image tests/fixtures/test-image-ocr.png                 # PP-OCRv6 (CPU, ~31 MB)
+python scripts/run_feature_checks.py --image tests/fixtures/test-image-ocr.png --model glm-ocr --device cuda
 """
 
 from __future__ import annotations
@@ -58,7 +59,7 @@ def run_live_ocr(image: Path, model: str, device: Optional[str]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate TextLens features.")
     parser.add_argument("--image", type=Path, help="Run an additional real OCR request on this image.")
-    parser.add_argument("--model", default="glm-ocr", help="Registered model for --image (default: glm-ocr).")
+    parser.add_argument("--model", default="ppocrv6-small", help="Registered model for --image (default: ppocrv6-small).")
     parser.add_argument("--device", choices=("cuda", "cpu"), help="Optional device for --image.")
     args = parser.parse_args()
 

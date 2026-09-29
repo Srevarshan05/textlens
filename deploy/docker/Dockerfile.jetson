@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1.7
+# TextLens — NVIDIA Jetson (Orin / Xavier, JetPack 6.x, aarch64). Edge profile.
+#
+#   docker build -f deploy/docker/Dockerfile.jetson -t textlens:jetson .
+#   docker run --runtime nvidia -p 8000:8000 -v textlens-models:/models textlens:jetson
+#
+# ONNX Runtime with CUDA/TensorRT on Jetson comes from NVIDIA's Jetson AI Lab
+# index, not PyPI. Adjust JETSON_PIP_INDEX to your JetPack/CUDA version.
+# Status: reference image — build on the device (or with qemu); not CI-tested.
+
+ARG BASE=nvcr.io/nvidia/l4t-jetpack:r36.4.0
+FROM ${BASE}
+ARG JETSON_PIP_INDEX=https://pypi.jetson-ai-lab.dev/jp6/cu126
+ARG EXTRAS=server
+ENV PYTHONUNBUFFERED=1 \
+    TEXTLENS_HOME=/data \
+    TEXTLENS_MODELS_DIR=/models \
+    TEXTLENS_HOST=0.0.0.0 \
+    TEXTLENS_PROFILE=edge \
+    TEXTLENS_ORT_TENSORRT=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip python3-venv \
+ && rm -rf /var/lib/apt/lists/* \
+ && python3 -m venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
+WORKDIR /src
+COPY pyproject.toml README.md LICENSE THIRD_PARTY_NOTICES.md ./
+COPY textlens ./textlens
+RUN pip install --no-cache-dir --extra-index-url "${JETSON_PIP_INDEX}" onnxruntime-gpu \
+ && pip install --no-cache-dir ".[${EXTRAS}]" \
+ && (pip uninstall -y onnxruntime || true) \
+ && pip install --no-cache-dir --force-reinstall --no-deps --extra-index-url "${JETSON_PIP_INDEX}" onnxruntime-gpu \
+ && textlens models install ppocrv6-small
+VOLUME ["/data", "/models"]
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD python3 -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=4)" || exit 1
+ENTRYPOINT ["textlens"]
+CMD ["serve", "--device", "cuda", "--warmup"]

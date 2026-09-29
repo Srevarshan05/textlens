@@ -15,8 +15,7 @@ Zero external dependencies required.
 from __future__ import annotations
 
 import time
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from textlens.batch.types import BatchTask, JobMetrics
@@ -37,7 +36,6 @@ class SimplePDFReport:
         # Calculated statistics
         total = m.total_files
         processed = m.processed_files
-        failed = m.failed_files
         duration = f"{m.elapsed_time_sec:.1f}s" if m.elapsed_time_sec < 60 else f"{int(m.elapsed_time_sec//60)}m {int(m.elapsed_time_sec%60)}s"
         succ_rate = f"{(processed / total * 100):.1f}%" if total > 0 else "100%"
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S")

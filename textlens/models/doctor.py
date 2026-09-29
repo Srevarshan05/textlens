@@ -1,37 +1,18 @@
 """
 textlens.models.doctor
 ───────────────────────
-Smart Hardware Doctor — deterministic model recommendations, zero AI.
+``textlens doctor`` — diagnose hardware, runtimes and model fit.
 
-The Doctor inspects real hardware (via :mod:`textlens.models.hardware`) and
-applies a fixed, documented rule-set to recommend, warn, or reject each
-registered TextLens model.
+Recommendations are **derived from model specs** (no per-model special
+cases): a model is
 
-Rules (VRAM-based, deterministic)
-----------------------------------
+* **Excellent**        — hardware meets its recommended VRAM, or it is a
+                         CPU-practical model on a CPU-only machine;
+* **Supported**        — meets the minimum, or runs on CPU albeit slowly;
+* **Not Recommended**  — below the minimum, or GPU-only on a CPU machine.
 
-VRAM ≥ 8 GB   → fully recommend all 6 models
-VRAM ≥ 6 GB   → fully recommend glm-ocr, florence2, smolvlm, paddleocr
-                  warn for lighton-ocr, hunyuan-ocr
-VRAM ≥ 4 GB   → fully recommend florence2, smolvlm, paddleocr
-                  warn for glm-ocr (large PDFs may be slower)
-                  not-recommended for lighton-ocr, hunyuan-ocr
-VRAM ≥ 2 GB   → fully recommend smolvlm, paddleocr
-                  warn for florence2, glm-ocr
-                  not-recommended for lighton-ocr, hunyuan-ocr
-VRAM < 2 GB   → fully recommend paddleocr, smolvlm (CPU)
-                  not-recommended for everything else
-CPU-only      → fully recommend paddleocr, smolvlm
-                  warn for glm-ocr, florence2
-                  not-recommended for lighton-ocr, hunyuan-ocr
-
-Usage
------
-    from textlens.models.doctor import HardwareDoctor
-
-    doctor = HardwareDoctor()
-    report = doctor.run()
-    doctor.print_report(report)
+Runtime readiness (is torch / onnxruntime installed?) is reported
+separately from hardware fit, with the exact command that fixes it.
 """
 
 from __future__ import annotations
@@ -39,18 +20,12 @@ from __future__ import annotations
 import dataclasses
 import enum
 import logging
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from textlens.models.hardware import HardwareProfile, inspect_hardware
 from textlens.models.metadata import ModelMetadata
-from textlens.models.registry import ModelRegistry
 
 logger = logging.getLogger("textlens.models.doctor")
-
-
-# ---------------------------------------------------------------------------
-# Enums and dataclasses
-# ---------------------------------------------------------------------------
 
 
 class Recommendation(enum.Enum):
@@ -63,299 +38,260 @@ class Recommendation(enum.Enum):
 
 @dataclasses.dataclass(frozen=True)
 class ModelRecommendation:
-    """Recommendation for a single model."""
-
     model: ModelMetadata
     level: Recommendation
     note: str = ""
+    ready: Optional[bool] = None  # runtime + weights available
+    ready_note: str = ""
 
 
 @dataclasses.dataclass(frozen=True)
 class DoctorReport:
-    """Full doctor report combining hardware profile and model recommendations."""
-
     profile: HardwareProfile
     recommendations: List[ModelRecommendation]
+    system: Any = None  # textlens.runtime.system.SystemInfo
+    recommended_profile: Optional[str] = None
+    recommended_model: Optional[str] = None
+    warnings: List[str] = dataclasses.field(default_factory=list)
+    fixes: List[str] = dataclasses.field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "hardware": dataclasses.asdict(self.profile),
+            "system": self.system.to_dict() if self.system is not None else None,
+            "recommended_profile": self.recommended_profile,
+            "recommended_model": self.recommended_model,
+            "models": [
+                {"id": r.model.id, "level": r.level.value, "note": r.note, "ready": r.ready, "ready_note": r.ready_note}
+                for r in self.recommendations
+            ],
+            "warnings": self.warnings,
+            "fixes": self.fixes,
+        }
 
 
-# ---------------------------------------------------------------------------
-# Deterministic rule-set
-# ---------------------------------------------------------------------------
+def _rule_for_model(model_id: str, vram_gb: float, cuda_available: bool) -> tuple:
+    """Return ``(Recommendation, note)`` for a model on the given hardware."""
+    from textlens.models.specs import get_spec
 
-# Each rule is a tuple of:
-#   (model_id, min_vram_to_be_excellent, note_if_only_supported, note_if_not_recommended)
-# Rule evaluation happens in the context of the *full* VRAM tier logic below.
-
-
-def _evaluate_recommendations(
-    profile: HardwareProfile,
-) -> List[ModelRecommendation]:
-    """Apply deterministic rules and return a recommendation for every model.
-
-    Parameters
-    ----------
-    profile : HardwareProfile
-        The detected hardware profile.
-
-    Returns
-    -------
-    list[ModelRecommendation]
-        One entry per registered model, in catalog order.
-    """
-    vram = profile.primary_vram_gb
-    cuda = profile.cuda_available
-    results: List[ModelRecommendation] = []
-
-    for meta in ModelRegistry.all():
-        mid = meta.id
-        rec, note = _rule_for_model(mid, vram, cuda)
-        results.append(ModelRecommendation(model=meta, level=rec, note=note))
-
-    return results
+    spec = get_spec(model_id)
+    E, S, N = Recommendation.EXCELLENT, Recommendation.SUPPORTED, Recommendation.NOT_RECOMMENDED
+    if spec.backend == "onnx":
+        return E, ("Runs on any CPU; GPU optional." if not cuda_available else "")
+    if not cuda_available:
+        if not spec.cpu:
+            return N, "Requires a CUDA GPU; CPU mode is not practical for this model."
+        if spec.cpu_practical:
+            return E, "Runs well on CPU."
+        return S, "Runs on CPU, but expect significantly slower performance."
+    target = spec.recommended_vram_gb or spec.min_vram_gb
+    if vram_gb >= target:
+        return E, ""
+    if vram_gb >= spec.min_vram_gb:
+        return S, f"Below the recommended {target:g} GB VRAM; large pages may be slower."
+    if spec.cpu_practical:
+        return S, f"Only {vram_gb:g} GB VRAM; run it on CPU (device='cpu')."
+    return N, f"Needs at least {spec.min_vram_gb:g} GB VRAM."
 
 
-def _rule_for_model(
-    model_id: str, vram_gb: float, cuda_available: bool
-) -> tuple[Recommendation, str]:
-    """Return (Recommendation, note) for a model given actual hardware.
+def _local_specs():
+    from textlens.models.specs import all_specs
 
-    All logic is purely deterministic — no randomness, no ML inference.
-    """
-    E = Recommendation.EXCELLENT
-    S = Recommendation.SUPPORTED
-    N = Recommendation.NOT_RECOMMENDED
-
-    # SmolVLM — 256M, works everywhere
-    if model_id == "smolvlm":
-        if cuda_available and vram_gb >= 2.0:
-            return E, ""
-        if cuda_available and vram_gb > 0.0:
-            return S, "Very low VRAM — CPU mode recommended."
-        return E, "Excellent on CPU — designed for edge devices."
-
-    # GLM OCR — default, needs 6 GB
-    if model_id == "glm-ocr":
-        if not cuda_available:
-            return S, "Running on CPU — expect significantly slower performance."
-        if vram_gb >= 6.0:
-            return E, ""
-        if vram_gb >= 4.0:
-            return S, "Below recommended 6 GB VRAM. Large PDFs may be slower."
-        if vram_gb >= 2.0:
-            return S, "Low VRAM detected. Use smaller batch sizes."
-        return N, "Insufficient VRAM. Use smolvlm instead."
-
-    # LightOnOCR — needs 8 GB
-    if model_id == "lighton-ocr":
-        if not cuda_available:
-            return S, "Runs on CPU — significantly slower for large documents."
-        if vram_gb >= 8.0:
-            return E, ""
-        if vram_gb >= 6.0:
-            return S, "Below recommended 8 GB VRAM. May require lower batch size."
-        return N, "Requires 8 GB VRAM for reliable performance."
-
-    # HunyuanOCR — needs 8 GB, no CPU warning
-    if model_id == "hunyuan-ocr":
-        if not cuda_available:
-            return N, "Requires GPU. CPU mode is not practical for this model."
-        if vram_gb >= 8.0:
-            return E, ""
-        if vram_gb >= 6.0:
-            return S, "Below recommended 8 GB VRAM. Reduce batch size."
-        return N, "Requires more GPU memory (8 GB minimum recommended)."
-
-    # Fallback for future models — conservative
-    return S, "Hardware compatibility unknown for this model."
+    return [s for s in all_specs() if s.runnable_locally]
 
 
-# ---------------------------------------------------------------------------
-# HardwareDoctor
-# ---------------------------------------------------------------------------
+def _evaluate_recommendations(profile: HardwareProfile) -> List[ModelRecommendation]:
+    """One recommendation per locally runnable model (catalog order)."""
+    out = []
+    for spec in _local_specs():
+        level, note = _rule_for_model(spec.id, profile.primary_vram_gb, profile.cuda_available)
+        out.append(ModelRecommendation(model=spec.to_metadata(), level=level, note=note))
+    return out
+
+
+def _readiness(spec: Any) -> tuple:
+    from textlens.backends.loader import install_hint, missing_requirements
+    from textlens.models import artifacts
+
+    missing = missing_requirements(spec)
+    if missing:
+        return False, f"install runtime: {install_hint(spec)}"
+    if not artifacts.is_installed(spec):
+        size = f" (~{spec.download_size_gb:g} GB)" if spec.download_size_gb else ""
+        return False, f"weights not installed{size}: textlens models install {spec.id}"
+    return True, "ready"
 
 
 class HardwareDoctor:
-    """Performs hardware inspection and generates deterministic model recommendations.
+    """Inspect hardware + runtimes and produce model recommendations."""
 
-    Usage
-    -----
-    ::
+    def run(self, deep: bool = False) -> DoctorReport:
+        from textlens.core.router import Router
+        from textlens.runtime.system import SystemInfo, detect_platform, detect_runtimes, inspect_system
 
-        doctor = HardwareDoctor()
-        report = doctor.run()
-        doctor.print_report(report)
-    """
-
-    def run(self) -> DoctorReport:
-        """Inspect hardware and compute model recommendations.
-
-        Returns
-        -------
-        DoctorReport
-            Full hardware profile and per-model recommendations.
-        """
         profile = inspect_hardware()
-        recommendations = _evaluate_recommendations(profile)
-        return DoctorReport(profile=profile, recommendations=recommendations)
+        try:
+            system = inspect_system(refresh=True, deep=deep)
+        except Exception as exc:  # never let diagnostics crash the doctor
+            logger.debug("system inspection failed: %s", exc)
+            plat = detect_platform()
+            system = SystemInfo(hardware=profile, platform=plat, runtimes=detect_runtimes(plat.system))
+        recs = []
+        for spec in _local_specs():
+            level, note = _rule_for_model(spec.id, profile.primary_vram_gb, profile.cuda_available)
+            ready, ready_note = _readiness(spec)
+            recs.append(ModelRecommendation(spec.to_metadata(), level, note, ready, ready_note))
+        warnings, fixes = self._diagnose(system)
+        rec_profile = rec_model = None
+        try:
+            router = Router("auto", system=system)
+            rec_profile = router.profile.name
+            rec_model = router.route().model
+        except Exception as exc:
+            warnings.append(f"No runnable OCR model yet: {getattr(exc, 'message', exc)}")
+        return DoctorReport(profile, recs, system, rec_profile, rec_model, warnings, fixes)
+
+    @staticmethod
+    def _diagnose(system: Any) -> tuple:
+        from textlens.hardware import get_pytorch_cuda_install_cmd
+
+        warnings: List[str] = []
+        fixes: List[str] = []
+        rt = system.runtimes
+        hw = system.hardware
+        if not rt.onnxruntime:
+            warnings.append("ONNX Runtime is missing: the default edge/CPU OCR engine cannot run.")
+            fixes.append("pip install onnxruntime")
+        dists = [d for d in ("onnxruntime", "onnxruntime-gpu") if _dist_installed(d)]
+        if len(dists) > 1:
+            warnings.append("Both onnxruntime and onnxruntime-gpu are installed; they conflict.")
+            fixes.append("pip uninstall -y onnxruntime && pip install --force-reinstall onnxruntime-gpu")
+        if hw.gpus and rt.torch and rt.torch_cuda_build is False:
+            warnings.append(f"An NVIDIA GPU is present but PyTorch {rt.torch} is a CPU-only build.")
+            fixes.append(get_pytorch_cuda_install_cmd(hw.system_cuda_version))
+        if hw.gpus and not rt.torch:
+            fixes.append('For GPU document VLMs: pip install "textlens-ocr[gpu]"  (then install a CUDA torch wheel: '
+                         + get_pytorch_cuda_install_cmd(hw.system_cuda_version) + ")")
+        if hw.gpus and rt.onnxruntime and "CUDAExecutionProvider" not in rt.ort_providers:
+            fixes.append("Optional GPU acceleration for PP-OCR: pip uninstall -y onnxruntime && pip install onnxruntime-gpu")
+        if system.platform.device_class == "jetson" and "CUDAExecutionProvider" not in rt.ort_providers:
+            fixes.append("Jetson: install NVIDIA's onnxruntime-gpu wheel for your JetPack (see docs/deployment/jetson.md).")
+        if system.platform.machine in ("armv7l", "armv6l"):
+            warnings.append("32-bit ARM: ONNX Runtime has no official wheels; use a 64-bit OS (see docs/deployment/raspberry-pi.md).")
+        if rt.transformers and rt.transformers.split(".")[0].isdigit() and int(rt.transformers.split(".")[0]) < 5:
+            warnings.append(f"transformers {rt.transformers}: GLM-OCR, LightOnOCR and HunyuanOCR need transformers >= 5.")
+        return warnings, fixes
 
     def print_report(self, report: DoctorReport) -> None:  # noqa: C901
-        """Print a rich, formatted doctor report to the console.
-
-        Parameters
-        ----------
-        report : DoctorReport
-            A report produced by :meth:`run`.
-        """
         try:
+            from rich import box
             from rich.console import Console
             from rich.panel import Panel
             from rich.table import Table
             from rich.text import Text
-            from rich import box
-
-            console = Console(force_terminal=True, highlight=False)
-            p = report.profile
-
-            # ── System Overview ─────────────────────────────────────────
-            console.print()
-            console.rule("[bold cyan]TextLens Doctor[/bold cyan]", style="cyan")
-            console.print()
-
-            sys_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
-            sys_table.add_column("Field", style="dim", min_width=22)
-            sys_table.add_column("Value", style="bold white")
-
-            sys_table.add_row("Operating System", p.os_name)
-            sys_table.add_row("Python", p.python_version)
-            sys_table.add_row("PyTorch", p.torch_version)
-            cuda_display = p.cuda_version or p.system_cuda_version or "Not Detected"
-            sys_table.add_row("CUDA", cuda_display)
-
-            if p.primary_gpu_name:
-                sys_table.add_row("GPU", p.primary_gpu_name)
-                sys_table.add_row("VRAM", f"{p.primary_vram_gb} GB")
-            else:
-                sys_table.add_row("GPU", "[dim]Not Detected[/dim]")
-
-            sys_table.add_row("CPU", p.cpu_name)
-            sys_table.add_row(
-                "CPU Cores",
-                f"{p.cpu_physical_cores} physical / {p.cpu_logical_cores} logical",
-            )
-            sys_table.add_row("RAM", f"{p.ram_total_gb:.1f} GB")
-            sys_table.add_row("Device", p.device_type.upper())
-
-            console.print(
-                Panel(sys_table, title="[bold]System Information[/bold]", border_style="cyan")
-            )
-
-            # ── Hardware Analysis ────────────────────────────────────────
-            console.rule("[bold cyan]Hardware Analysis[/bold cyan]", style="cyan")
-            console.print()
-
-            gpu_ok = "[green]YES[/green]" if p.gpus else "[red]NO[/red]"
-            cuda_ok = "[green]YES[/green]" if p.cuda_available else "[red]NO[/red]"
-            console.print(f"  GPU Detected  : {gpu_ok}")
-            console.print(f"  CUDA Ready    : {cuda_ok}")
-            console.print()
-
-            # ── Model Recommendations ────────────────────────────────────
-            rec_table = Table(
-                box=box.ROUNDED,
-                show_header=True,
-                header_style="bold cyan",
-                padding=(0, 2),
-            )
-            rec_table.add_column("Model", min_width=18)
-            rec_table.add_column("Verdict", min_width=18)
-            rec_table.add_column("Note", min_width=35)
-
-            ICONS = {
-                Recommendation.EXCELLENT: "[OK]",
-                Recommendation.SUPPORTED: "[WARN]",
-                Recommendation.NOT_RECOMMENDED: "[FAIL]",
-            }
-            STYLES = {
-                Recommendation.EXCELLENT: "bold green",
-                Recommendation.SUPPORTED: "bold yellow",
-                Recommendation.NOT_RECOMMENDED: "bold red",
-            }
-
-            for item in report.recommendations:
-                icon = ICONS[item.level]
-                style = STYLES[item.level]
-                rec_table.add_row(
-                    Text(item.model.display_name, style="bold white"),
-                    Text(f"{icon} {item.level.value}", style=style),
-                    Text(item.note or "-", style="dim"),
-                )
-
-            console.print(
-                Panel(
-                    rec_table,
-                    title="[bold]Recommended Models[/bold]",
-                    border_style="cyan",
-                )
-            )
-
-            # ── CPU-only notice ──────────────────────────────────────────
-            if not p.cuda_available:
-                console.print()
-                console.print(
-                    Panel(
-                        Text(
-                            "GPU not detected.\n"
-                            "TextLens will run on CPU.\n"
-                            "Large OCR tasks may be significantly slower.\n\n"
-                            "Best options for CPU:\n"
-                            "  [OK] SmolVLM     — Excellent\n"
-                            "  [WARN] GLM OCR   — Works, expect slower performance.",
-                            style="yellow",
-                        ),
-                        title="[bold yellow]CPU Mode Notice[/bold yellow]",
-                        border_style="yellow",
-                    )
-                )
-            console.print()
-
         except ImportError:
-            # Graceful plain-text fallback when rich is not installed
             self._print_plain(report)
+            return
+        from textlens import __version__
+
+        console = Console(highlight=False)
+        p = report.profile
+        sysinfo = report.system
+        console.print()
+        console.rule(f"[bold cyan]TextLens System Diagnostics[/bold cyan] [dim]v{__version__}[/dim]", style="cyan")
+        t = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
+        t.add_column("Field", style="dim", min_width=16)
+        t.add_column("Value", style="bold white")
+        t.add_row("OS", p.os_name)
+        if sysinfo is not None:
+            t.add_row("Platform", f"{sysinfo.platform.device_class} ({sysinfo.platform.machine})" + (f" · {sysinfo.platform.board}" if sysinfo.platform.board else ""))
+        t.add_row("Python", p.python_version)
+        t.add_row("CPU", f"{p.cpu_name} ({p.cpu_physical_cores}C/{p.cpu_logical_cores}T)")
+        t.add_row("RAM", f"{p.ram_total_gb:.1f} GB" if p.ram_total_gb else "unknown (install psutil)")
+        t.add_row("GPU", f"{p.primary_gpu_name} · {p.primary_vram_gb:g} GB VRAM" if p.primary_gpu_name else "[dim]none detected[/dim]")
+        t.add_row("CUDA driver", p.system_cuda_version or "[dim]-[/dim]")
+        console.print(Panel(t, title="[bold]System[/bold]", border_style="cyan"))
+
+        if sysinfo is not None:
+            rt = sysinfo.runtimes
+            b = Table(box=box.SIMPLE, show_header=True, header_style="bold cyan", padding=(0, 2))
+            b.add_column("Runtime")
+            b.add_column("Status")
+
+            def row(name: str, version: Optional[str], extra: str = "", optional: bool = True) -> None:
+                if version:
+                    b.add_row(name, Text(f"✓ {version} {extra}".rstrip(), style="green"))
+                else:
+                    b.add_row(name, Text("optional" if optional else "✗ missing", style="dim" if optional else "bold red"))
+
+            providers = ", ".join(x.replace("ExecutionProvider", "") for x in rt.ort_providers)
+            row("ONNX Runtime", rt.onnxruntime, f"[{providers}]" if providers else "", optional=False)
+            torch_extra = ""
+            if rt.torch:
+                torch_extra = "(CUDA)" if sysinfo.torch_cuda else "(CPU build)"
+            row("PyTorch", rt.torch, torch_extra)
+            row("Transformers", rt.transformers)
+            row("vLLM", rt.vllm)
+            row("TensorRT", rt.tensorrt)
+            row("Paddle", rt.paddle)
+            row("FastAPI (server)", rt.fastapi)
+            row("ANPR models", rt.fast_plate_ocr and rt.open_image_models and f"{rt.fast_plate_ocr}")
+            console.print(Panel(b, title="[bold]Backends[/bold]", border_style="cyan"))
+
+        m = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", padding=(0, 1))
+        m.add_column("Model", min_width=16)
+        m.add_column("Hardware fit", min_width=16)
+        m.add_column("Ready", min_width=6)
+        m.add_column("Notes")
+        styles = {Recommendation.EXCELLENT: "bold green", Recommendation.SUPPORTED: "bold yellow", Recommendation.NOT_RECOMMENDED: "bold red"}
+        for r in report.recommendations:
+            ready = Text("yes", style="green") if r.ready else Text("no", style="dim")
+            note = r.note if r.ready else (r.ready_note + (f" · {r.note}" if r.note else ""))
+            m.add_row(Text(r.model.id, style="bold white"), Text(r.level.value, style=styles[r.level]), ready, Text(note or "-", style="dim"))
+        console.print(Panel(m, title="[bold]Local models[/bold]", border_style="cyan"))
+
+        summary = Text()
+        summary.append("Recommended profile: ", style="dim")
+        summary.append(f"{report.recommended_profile or 'n/a'}\n", style="bold green")
+        summary.append("Default model:       ", style="dim")
+        summary.append(f"{report.recommended_model or 'n/a'}", style="bold green")
+        console.print(Panel(summary, border_style="green"))
+        for w in report.warnings:
+            console.print(f"[yellow]! {w}[/yellow]")
+        if report.fixes:
+            console.print("[bold]Suggested commands:[/bold]")
+            for f in report.fixes:
+                console.print(f"  [cyan]{f}[/cyan]")
+        console.print()
 
     def _print_plain(self, report: DoctorReport) -> None:
-        """Plain-text fallback for environments without rich installed."""
         p = report.profile
-        sep = "=" * 50
-        print(f"\n{sep}")
-        print("TextLens Doctor")
+        sep = "=" * 60
+        print(f"\n{sep}\nTextLens Doctor\n{sep}")
+        print(f"OS       : {p.os_name}")
+        print(f"Python   : {p.python_version}")
+        print(f"CPU      : {p.cpu_name} ({p.cpu_physical_cores}C/{p.cpu_logical_cores}T)")
+        print(f"RAM      : {p.ram_total_gb:.1f} GB")
+        print(f"GPU      : {p.primary_gpu_name or 'Not Detected'} ({p.primary_vram_gb} GB VRAM)")
+        print(f"CUDA     : {p.system_cuda_version or 'Not Detected'}")
         print(sep)
-        print(f"OS           : {p.os_name}")
-        print(f"Python       : {p.python_version}")
-        print(f"PyTorch      : {p.torch_version}")
-        print(f"CUDA         : {p.cuda_version or p.system_cuda_version or 'Not Detected'}")
-        print(f"GPU          : {p.primary_gpu_name or 'Not Detected'}")
-        print(f"VRAM         : {p.primary_vram_gb} GB")
-        print(f"CPU          : {p.cpu_name}")
-        print(f"CPU Cores    : {p.cpu_physical_cores}P / {p.cpu_logical_cores}L")
-        print(f"RAM          : {p.ram_total_gb:.1f} GB")
-        print(f"Device       : {p.device_type.upper()}")
+        for r in report.recommendations:
+            ready = "ready" if r.ready else (r.ready_note or "not ready")
+            print(f"  {r.model.id:<16} {r.level.value:<16} {ready}{('  (' + r.note + ')') if r.note else ''}")
         print(sep)
-        print("Model Recommendations")
-        print(sep)
-        ICONS = {
-            Recommendation.EXCELLENT: "[OK]",
-            Recommendation.SUPPORTED: "[WARN]",
-            Recommendation.NOT_RECOMMENDED: "[FAIL]",
-        }
-        for item in report.recommendations:
-            icon = ICONS[item.level]
-            note = f"  ({item.note})" if item.note else ""
-            print(f"  {icon} {item.model.display_name:<20} {item.level.value}{note}")
-        print(sep)
-        if not p.cuda_available:
-            print(
-                "\nGPU not detected. TextLens will run on CPU.\n"
-                "Large OCR tasks may be significantly slower.\n"
-                "Recommended: SmolVLM"
-            )
+        print(f"Recommended profile: {report.recommended_profile}   default model: {report.recommended_model}")
+        for w in report.warnings:
+            print(f"! {w}")
+        for f in report.fixes:
+            print(f"  $ {f}")
         print()
+
+
+def _dist_installed(name: str) -> bool:
+    import importlib.metadata
+
+    try:
+        importlib.metadata.version(name)
+        return True
+    except importlib.metadata.PackageNotFoundError:
+        return False

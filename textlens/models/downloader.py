@@ -124,6 +124,23 @@ class ModelDownloader:
                 print(f"[OK] {msg}")
             return self._cache.model_path(model_id)
 
+        # ── Pinned URL artifacts (SHA-256 verified, no HF dependency) ───
+        from textlens.models.specs import get_spec
+
+        spec = get_spec(model_id)
+        if spec.artifacts or not spec.hf_repo_id:
+            return self._install_artifacts(spec, meta, force, console)
+
+        from textlens.config import get_settings
+
+        if get_settings().offline:
+            from textlens.errors import OfflineError
+
+            raise OfflineError(
+                f"Model {model_id!r} is not installed and offline mode is enabled.",
+                hint="Unset TEXTLENS_OFFLINE or copy the model into the TextLens model cache.",
+            )
+
         # ── Check huggingface_hub available ─────────────────────────────
         if not _HF_AVAILABLE:
             raise DownloadError(
@@ -178,14 +195,16 @@ class ModelDownloader:
                         total=None,  # indeterminate — HF handles chunking
                     )
                     downloaded_path = huggingface_hub.snapshot_download(
-                        repo_id=meta.hf_repo_id,
+                        repo_id=spec.hf_repo_id,
+                        revision=spec.revision,
                         local_dir=str(local_dir),
                         token=self._hf_token,
                     )
                     progress.update(task, completed=100, total=100)
             else:
                 downloaded_path = huggingface_hub.snapshot_download(
-                    repo_id=meta.hf_repo_id,
+                    repo_id=spec.hf_repo_id,
+                    revision=spec.revision,
                     local_dir=str(local_dir),
                     token=self._hf_token,
                 )
@@ -221,6 +240,48 @@ class ModelDownloader:
             model_id, elapsed, disk_gb, local_dir,
         )
         return Path(downloaded_path)
+
+    def _install_artifacts(self, spec, meta, force: bool, console) -> Path:
+        """Install pinned URL artifacts with a byte-accurate progress bar."""
+        from textlens.models import artifacts
+
+        if not spec.artifacts:
+            from textlens.models.exceptions import DownloadError as _DE
+
+            raise _DE(spec.id, "this model is served remotely or external; nothing to download")
+        start = time.time()
+        if console:
+            total = sum(a.size_bytes or 0 for a in spec.artifacts) or None
+            with Progress(
+                SpinnerColumn("line"),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                DownloadColumn(),
+                TransferSpeedColumn(),
+                TimeElapsedColumn(),
+                console=console,
+                transient=False,
+            ) as progress:
+                task = progress.add_task(f"[cyan]{meta.display_name}[/cyan]", total=total)
+                done_before = {"sum": 0, "cur": {}}
+
+                def on_progress(name: str, done: int, _total) -> None:
+                    done_before["cur"][name] = done
+                    progress.update(task, completed=sum(done_before["cur"].values()))
+
+                path = artifacts.install(spec, force=force, progress=on_progress)
+        else:
+            print(f"Downloading {meta.display_name} ...")
+            path = artifacts.install(spec, force=force)
+        elapsed = round(time.time() - start, 1)
+        msg = f"{meta.display_name} installed and verified (SHA-256) in {elapsed}s"
+        if console:
+            console.print(f"[bold green][OK][/bold green] {msg}")
+            console.print(f"  [dim]Location:[/dim] {path}")
+        else:
+            print(f"[OK] {msg}")
+            print(f"  Location: {path}")
+        return path
 
     def remove(self, model_id: str) -> bool:
         """Remove a cached model from disk.

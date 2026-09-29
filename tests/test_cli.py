@@ -10,8 +10,7 @@ the right handlers — they do not trigger downloads or hardware detection.
 from __future__ import annotations
 
 import pytest
-from unittest.mock import patch, MagicMock
-from argparse import Namespace
+from unittest.mock import patch
 
 import sys
 

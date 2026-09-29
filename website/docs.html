@@ -1,720 +1,544 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="TextLens Documentation — complete API reference, installation guides, BatchOCR, CLI, REST API, and CUDA setup instructions."/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TextLens Documentation</title>
-  <link rel="icon" type="image/png" href="assets/favicon.png?v=3"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body {
-      background: #0d0f10;
-      color: #e8ece9;
-      font-family: 'Manrope', sans-serif;
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden;
-    }
-
-    /* ── Doc header ───────────────────────────── */
-    .dochead {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 0 max(24px, calc((100vw - 1340px) / 2));
-      height: 64px;
-      border-bottom: 1px solid #252d26;
-      background: #0d0f10;
-      position: sticky;
-      top: 0;
-      z-index: 200;
-    }
-    .dochead-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: #fff; flex-shrink: 0; }
-    .dochead-logo { width: 30px; height: 30px; object-fit: contain; border-radius: 6px; }
-    .dochead-name { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; }
-    .dochead-sub { color: #9da59f; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .dochead-sep { flex: 1; }
-    .dochead-github {
-      display: flex; align-items: center; gap: 6px; color: #9da59f;
-      text-decoration: none; border: 1px solid #2d3a2e;
-      border-radius: 999px; padding: 7px 13px; font-size: 12px; font-weight: 700;
-      transition: border-color .2s, color .2s; white-space: nowrap; flex-shrink: 0;
-    }
-    .dochead-github:hover { border-color: #70df7f; color: #70df7f; }
-    .dochead-github svg { width: 15px; height: 15px; fill: currentColor; }
-    .dochead-back { color: #9da59f; text-decoration: none; font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
-    .dochead-back:hover { color: #fff; }
-
-    /* Mobile Menu Button */
-    .doc-menu-btn {
-      display: none;
-      background: transparent;
-      border: none;
-      color: #fff;
-      cursor: pointer;
-      padding: 6px;
-      flex-direction: column;
-      gap: 5px;
-      margin-left: auto;
-      z-index: 210;
-    }
-    .doc-menu-btn span {
-      width: 22px;
-      height: 2px;
-      background: #70df7f;
-      border-radius: 2px;
-      transition: transform .25s, opacity .25s;
-    }
-
-    /* Mobile Drawer */
-    .doc-drawer {
-      display: none;
-      position: fixed;
-      top: 64px;
-      left: 0;
-      width: 100%;
-      height: calc(100vh - 64px);
-      background: #0a0d0a;
-      z-index: 190;
-      padding: 24px 20px 40px;
-      overflow-y: auto;
-      border-top: 1px solid #252d26;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .doc-drawer.is-open { display: flex; }
-    .doc-drawer-group { font-size: 10px; font-weight: 800; color: #70df7f; letter-spacing: 1.5px; margin: 16px 0 4px; text-transform: uppercase; }
-    .doc-drawer-group:first-child { margin-top: 0; }
-    .doc-drawer a {
-      color: #c8d4ca;
-      text-decoration: none;
-      font-size: 14px;
-      padding: 9px 12px;
-      border-radius: 8px;
-      background: #111712;
-      border: 1px solid #1e2a1f;
-      display: block;
-      transition: background .2s, color .2s;
-    }
-    .doc-drawer a:hover, .doc-drawer a:active { color: #70df7f; background: #162217; }
-    .doc-drawer-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #252d26; }
-    .doc-drawer-actions a { text-align: center; font-weight: 700; }
-
-    /* ── Mobile Quick Jump Bar ─────────────────── */
-    .mobile-quick-jump {
-      display: none;
-      background: #121813;
-      border: 1px solid #253326;
-      border-radius: 12px;
-      padding: 12px 16px;
-      margin-bottom: 28px;
-    }
-    .mobile-quick-jump summary {
-      font-size: 13px; font-weight: 700; color: #70df7f; cursor: pointer;
-      display: flex; align-items: center; justify-content: space-between;
-      outline: none; list-style: none;
-    }
-    .mobile-quick-jump summary::-webkit-details-marker { display: none; }
-    .mobile-quick-jump-links {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 12px;
-    }
-    .mobile-quick-jump-links a {
-      color: #b0bcb2; font-size: 12px; text-decoration: none; padding: 6px 8px;
-      background: #182219; border-radius: 6px; text-align: center;
-    }
-
-    /* ── Layout ───────────────────────────────── */
-    .docgrid {
-      display: grid;
-      grid-template-columns: 220px minmax(0,760px) 180px;
-      gap: 55px;
-      max-width: 1340px; margin: 0 auto; padding: 48px 24px;
-    }
-
-    /* ── Sidebars ─────────────────────────────── */
-    .side { position: sticky; top: 84px; height: fit-content; }
-    .side a, .toc a {
-      display: block; color: #9da59f; text-decoration: none;
-      padding: 7px 0; font-size: 13px;
-      transition: color .18s;
-    }
-    .side a:hover, .toc a:hover { color: #a0f1a7; }
-    .side p, .toc p { font-size: 10px; font-weight: 800; color: #fff; letter-spacing: 1px; margin: 18px 0 6px; }
-    .side a:first-of-type { margin-top: 0; }
-
-    /* ── Content ──────────────────────────────── */
-    .content { min-width: 0; }
-    .content section { padding-bottom: 52px; border-bottom: 1px solid #1c2320; margin-bottom: 52px; }
-    .content section:last-child { border-bottom: none; }
-    .content h1 { font-size: clamp(32px, 5vw, 44px); letter-spacing: -1.8px; line-height: 1.1; margin-bottom: 20px; color: #fff; }
-    .content h2 { font-size: clamp(22px, 4vw, 26px); letter-spacing: -0.8px; margin-top: 0; margin-bottom: 16px; color: #fff; }
-    .content h3 { font-size: 17px; font-weight: 700; margin: 28px 0 8px; color: #c8d4ca; }
-    .content p, .content li { color: #adb5af; line-height: 1.85; font-size: 15px; }
-    .content ul, .content ol { padding-left: 20px; }
-    .content li { margin-bottom: 6px; }
-    .content code {
-      font-family: 'DM Mono', monospace; color: #a0f1a7;
-      background: #131b14; padding: 2px 6px; border-radius: 5px; font-size: 13px;
-      word-break: break-word;
-    }
-    .section-kicker {
-      font-size: 10px; font-weight: 800; letter-spacing: 2px; color: #70df7f;
-      text-transform: uppercase; margin-bottom: 10px;
-    }
-
-    /* ── Code blocks ──────────────────────────── */
-    .code-block {
-      background: #111812; border: 1px solid #2a3a2c;
-      border-radius: 12px; padding: 18px 20px;
-      font-family: 'DM Mono', monospace; font-size: 13px; line-height: 1.8;
-      color: #c8d4ca; white-space: pre-wrap; word-break: break-word;
-      overflow-x: auto; margin: 16px 0;
-      -webkit-overflow-scrolling: touch;
-    }
-    .t-kw { color: #c792ea; } .t-str { color: #a0f1a7; } .t-cmt { color: #546f58; }
-    .t-fn { color: #82aaff; } .t-num { color: #f78c6c; } .t-cls { color: #ffcb6b; }
-
-    /* ── Note / warning boxes ─────────────────── */
-    .note {
-      background: #152018; border: 1px solid #2e4f33;
-      padding: 16px 20px; border-radius: 12px; margin: 20px 0;
-    }
-    .note strong { color: #a0f1a7; display: block; margin-bottom: 6px; }
-    .note p { margin: 0; font-size: 14px; }
-    .warn { background: #1e1508; border-color: #5a3f10; }
-    .warn strong { color: #fbd38d; }
-
-    /* ── Table responsiveness ─────────────────── */
-    .table-wrapper {
-      width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      margin: 20px 0;
-      border: 1px solid #2a3a2c;
-      border-radius: 12px;
-      background: #111812;
-    }
-    .doc-table { width: 100%; border-collapse: collapse; min-width: 540px; }
-    .doc-table td, .doc-table th {
-      border: 1px solid #2a3a2c; padding: 11px 14px;
-      text-align: left; font-size: 13px; color: #adb5af;
-    }
-    .doc-table th { background: #151d16; color: #e8ece9; font-weight: 700; }
-    .doc-table td:first-child { font-family: 'DM Mono', monospace; color: #a0f1a7; }
-    .doc-table tr:hover td { background: #141b15; }
-
-    /* ── Badges ───────────────────────────────── */
-    .badge {
-      display: inline-block; padding: 2px 8px; border-radius: 999px;
-      font-size: 11px; font-weight: 700; margin-left: 6px;
-    }
-    .badge-default { background: rgba(112,223,127,0.15); color: #70df7f; border: 1px solid rgba(112,223,127,0.3); }
-    .badge-cuda { background: rgba(99,179,237,0.15); color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
-
-    /* ── TOC ──────────────────────────────────── */
-    .toc { position: sticky; top: 84px; height: fit-content; }
-
-    /* ── Doc Footer ───────────────────────────── */
-    .doc-footer {
-      border-top: 1px solid #1c2320;
-      padding: 32px 0 24px;
-      margin-top: 40px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: #7a8a7d;
-      font-size: 12px;
-    }
-    .doc-footer a { color: #70df7f; text-decoration: none; }
-
-    /* ── Media Queries ────────────────────────── */
-    @media (max-width: 960px) {
-      .docgrid { display: block; padding: 24px 16px; }
-      .side, .toc { display: none; }
-      .mobile-quick-jump { display: block; }
-      .dochead-back, .dochead-github, .dochead-sub { display: none; }
-      .doc-menu-btn { display: flex; }
-      .dochead { padding: 0 16px; }
-      .code-block { font-size: 12px; padding: 14px 16px; }
-      .doc-footer { flex-direction: column; gap: 12px; text-align: center; }
-    }
-  </style>
+  <meta name="description" content="How to install and use TextLens 2.0: Python API, CLI, PDFs and selective OCR, profiles and models, extraction, RAG, REST server, MCP, edge devices, GPUs and Docker." />
+  <meta name="theme-color" content="#0a0d0b" />
+  <link rel="canonical" href="https://textlens-website.vercel.app/docs.html" />
+  <meta property="og:title" content="TextLens Documentation" />
+  <meta property="og:description" content="Install TextLens, then read images and PDFs with one line of Python." />
+  <link rel="icon" type="image/png" href="assets/favicon-mark.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-<!-- ── Header ──────────────────────────────────── -->
-<header class="dochead">
-  <a class="dochead-brand" href="index.html">
-    <img class="dochead-logo" src="assets/logo.png?v=3" alt="TextLens logo"/>
-    <span class="dochead-name">TextLens</span>
-  </a>
-  <div class="dochead-sub">
-    <span style="color:#2d3a2e;font-size:18px">/</span>
-    <span>Documentation</span>
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="./" aria-label="TextLens home">
+      <img src="assets/mark.png" alt="" width="39" height="22" />
+      TextLens
+      <span class="version-pill" data-pypi-version>v2.0</span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Main">
+      <a href="./#features">Features</a>
+      <a href="./#quickstart">Quickstart</a>
+      <a href="./#models">Models</a>
+      <a href="./#deploy">Deploy</a>
+      <a href="docs.html" class="active">Docs</a>
+    </nav>
+    <div class="header-actions">
+      <a class="gh-button" href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49l-.01-1.89c-2.78.62-3.37-1.2-3.37-1.2-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1.01.07 1.54 1.06 1.54 1.06.9 1.57 2.35 1.12 2.92.85.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.05A9.28 9.28 0 0 1 12 6.9c.85 0 1.71.12 2.51.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.93.68 1.88l-.01 2.78c0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg>
+        GitHub <span class="gh-stars" data-gh-stars></span>
+      </a>
+      <button class="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
   </div>
-  <div class="dochead-sep"></div>
-  <a class="dochead-back" href="index.html">&larr; Back to home</a>
-  <a class="dochead-github" href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noreferrer">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.2-3.37-1.2-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1.01.07 1.54 1.06 1.54 1.06.9 1.57 2.35 1.12 2.92.85.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.05A9.28 9.28 0 0 1 12 6.9c.85 0 1.71.12 2.51.34 1.91-1.32 2.75-1.05 2.75-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.57 5.06.36.32.68.93.68 1.88 0 1.36-.01 2.45-.01 2.78 0 .27.18.59.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z"/></svg>
-    Star on GitHub
-  </a>
-  <button class="doc-menu-btn" aria-label="Toggle navigation menu" id="docMenuBtn">
-    <span></span><span></span><span></span>
-  </button>
 </header>
 
-<!-- Mobile Navigation Drawer -->
-<nav class="doc-drawer" id="docDrawer">
-  <div class="doc-drawer-group">GET STARTED</div>
-  <a href="#what">What is TextLens?</a>
-  <a href="#problem">The problem solved</a>
-  <a href="#install">Installation</a>
-  <a href="#cuda">CUDA setup</a>
+<div class="container docs-layout">
 
-  <div class="doc-drawer-group">WORKFLOWS</div>
-  <a href="#ocr">Basic OCR</a>
-  <a href="#pdf">PDF processing</a>
-  <a href="#batch">BatchOCR</a>
-  <a href="#doctor">Doctor</a>
-  <a href="#discover">Model discovery</a>
-  <a href="#server">REST API</a>
-
-  <div class="doc-drawer-group">REFERENCE</div>
-  <a href="#cli">CLI reference</a>
-  <a href="#models">Supported models</a>
-  <a href="#faq">FAQ</a>
-
-  <div class="doc-drawer-actions">
-    <a href="index.html" style="background:#70df7f;color:#0a0d0a">&larr; Back to Home</a>
-    <a href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noreferrer">Star on GitHub</a>
-  </div>
-</nav>
-
-<div class="docgrid">
-
-  <!-- ── Left sidebar ──────────────────────────── -->
-  <aside class="side">
-    <p>GET STARTED</p>
-    <a href="#what">What is TextLens?</a>
-    <a href="#problem">The problem solved</a>
+  <aside class="sidebar" aria-label="Documentation">
+    <input class="search" type="search" placeholder="Search the docs…" aria-label="Search the docs" />
+    <h6>Getting started</h6>
     <a href="#install">Installation</a>
-    <a href="#cuda">CUDA setup</a>
-    <p>WORKFLOWS</p>
-    <a href="#ocr">Basic OCR</a>
-    <a href="#pdf">PDF processing</a>
-    <a href="#batch">BatchOCR</a>
-    <a href="#doctor">Doctor</a>
-    <a href="#discover">Model discovery</a>
+    <a href="#quickstart">Quickstart</a>
+    <a href="#config">Configuration</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+    <h6>Guides</h6>
+    <a href="#results">Results &amp; exports</a>
+    <a href="#pdf">PDFs &amp; selective OCR</a>
+    <a href="#routing">Profiles &amp; routing</a>
+    <a href="#models">Models</a>
+    <a href="#extraction">Field extraction</a>
+    <a href="#rag">RAG chunks</a>
+    <a href="#batch">Batch processing</a>
+    <a href="#anpr">Number plates (ANPR)</a>
+    <h6>Reference</h6>
+    <a href="#cli">CLI</a>
+    <a href="#api">Python API</a>
     <a href="#server">REST API</a>
-    <p>CLI REFERENCE</p>
-    <a href="#cli">All commands</a>
-    <p>REFERENCE</p>
-    <a href="#models">Supported models</a>
-    <a href="#faq">FAQ</a>
+    <a href="#mcp">MCP for AI agents</a>
+    <a href="#plugins">Custom backends</a>
+    <h6>Deploy</h6>
+    <a href="#edge">Edge &amp; Raspberry Pi</a>
+    <a href="#gpu">NVIDIA GPUs</a>
+    <a href="#docker">Docker &amp; Kubernetes</a>
+    <a href="#migration">Upgrading from 0.x</a>
   </aside>
 
-  <!-- ── Main content ──────────────────────────── -->
-  <main class="content">
+  <article class="doc">
+    <header>
+      <p class="eyebrow">Documentation</p>
+      <h1>TextLens docs</h1>
+      <p>Everything you need to read text from images and documents with TextLens 2.0. Each section links to the full guide on GitHub.</p>
+    </header>
 
-    <!-- Mobile Quick Jump Bar -->
-    <details class="mobile-quick-jump">
-      <summary>Quick Section Jump <span>&darr;</span></summary>
-      <div class="mobile-quick-jump-links">
-        <a href="#what">Overview</a>
-        <a href="#install">Install</a>
-        <a href="#cuda">CUDA</a>
-        <a href="#ocr">OCR</a>
-        <a href="#pdf">PDFs</a>
-        <a href="#batch">BatchOCR</a>
-        <a href="#doctor">Doctor</a>
-        <a href="#discover">Discover</a>
-        <a href="#server">REST API</a>
-        <a href="#cli">CLI</a>
-        <a href="#models">Models</a>
-        <a href="#faq">FAQ</a>
-      </div>
-    </details>
+    <p class="no-results" hidden>No sections match your search.</p>
 
-    <section id="what">
-      <p class="section-kicker">GET STARTED</p>
-      <h1>What is TextLens?</h1>
-      <p>TextLens is a local, VLM-powered OCR framework for Python. It turns images and PDFs into useful text while keeping model selection, CUDA checks, batch processing, and local serving in one reusable developer workflow.</p>
-      <div class="note">
-        <strong>Local by design</strong>
-        <p>Your files stay on your computer. Most supported engines are vision-language models (VLMs), so an NVIDIA CUDA GPU is strongly recommended for practical performance.</p>
-      </div>
-      <div class="note warn">
-        <strong>Apple Silicon / MPS</strong>
-        <p>MPS acceleration is on the roadmap. Initial support for Apple Silicon chips is in active development and will be released as a future update.</p>
-      </div>
-    </section>
-
-    <section id="problem">
-      <h2>The problem we solved</h2>
-      <p>Developers repeatedly rebuild the same OCR setup: choose a model, load images, render PDFs, check GPU VRAM, manage folders, handle retries, export results, and expose an API.</p>
-      <p>TextLens makes those pieces reusable through a clear Python API so you write it once and move on.</p>
-      <ul>
-        <li>One input layer for images, PDFs, URLs, bytes, and Pillow images</li>
-        <li>One catalog with model, parameter, and VRAM guidance</li>
-        <li>One BatchOCR workflow for folder-scale processing with a live dashboard</li>
-        <li>One local REST API with auto-generated Swagger documentation</li>
-        <li>One CLI to check hardware, manage models, and run inference</li>
-      </ul>
-    </section>
-
+    <!-- ── Getting started ─────────────────────────────── -->
     <section id="install">
-      <h2>Installation</h2>
-      <p>TextLens uses optional dependency groups. Install only what your use case needs:</p>
-
-      <h3>Inference only (OCR + BatchOCR)</h3>
-      <div class="code-block">pip install "textlens-ocr[inference,ui]"</div>
-
-      <h3>Inference + REST API server</h3>
-      <div class="code-block">pip install "textlens-ocr[inference,ui,server]"</div>
-
-      <h3>Live model discovery from Hugging Face</h3>
-      <div class="code-block">pip install "textlens-ocr[inference,ui,catalog]"</div>
-
-      <h3>Everything</h3>
-      <div class="code-block">pip install "textlens-ocr[all]"</div>
-
-      <h3>From source</h3>
-      <div class="code-block">git clone https://github.com/Srevarshan05/textlens.git
-cd textlens
-pip install -e ".[inference,ui,server,catalog]"</div>
+      <h2>Installation<a class="anchor" href="#install">#</a></h2>
+      <p>TextLens needs Python 3.10 or newer. The core install reads PDFs natively and runs OCR on the CPU — no PyTorch, no CUDA, no OpenCV.</p>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>pip install textlens-ocr
+textlens doctor        <span class="c"># check hardware, runtimes and models</span></pre></div>
+      <div class="callout"><strong>The package is <code>textlens-ocr</code></strong>, the import is <code>textlens</code>. <code>pip install textlens</code> installs an unrelated project.</div>
+      <h3>Optional extras</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Extra</th><th>Adds</th><th>Install</th></tr></thead>
+        <tbody>
+          <tr><td>gpu</td><td>Document VLMs (GLM-OCR, LightOnOCR, HunyuanOCR, SmolVLM) via PyTorch</td><td><code>pip install "textlens-ocr[gpu]"</code></td></tr>
+          <tr><td>server</td><td>REST API (<code>textlens serve</code>)</td><td><code>pip install "textlens-ocr[server]"</code></td></tr>
+          <tr><td>documents</td><td>DOCX and PPTX input</td><td><code>pip install "textlens-ocr[documents]"</code></td></tr>
+          <tr><td>anpr</td><td>Number-plate detection and recognition</td><td><code>pip install "textlens-ocr[anpr]"</code></td></tr>
+          <tr><td>mcp</td><td>MCP server for AI agents</td><td><code>pip install "textlens-ocr[mcp]"</code></td></tr>
+          <tr><td>ui</td><td>Rich terminal output, system telemetry</td><td><code>pip install "textlens-ocr[ui]"</code></td></tr>
+          <tr><td>vllm</td><td>vLLM for self-hosting large models (Linux)</td><td><code>pip install "textlens-ocr[vllm]"</code></td></tr>
+          <tr><td>all</td><td>Everything above except vllm</td><td><code>pip install "textlens-ocr[all]"</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>Combine extras with a comma: <code>pip install "textlens-ocr[server,documents]"</code>. TextLens never runs <code>pip install</code> for you — when a feature needs a package, the error message tells you the exact command.</p>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/getting-started/installation.md" target="_blank" rel="noopener">Full installation guide →</a>
     </section>
 
-    <section id="cuda">
-      <h2>NVIDIA CUDA setup</h2>
-      <p>TextLens VLMs require CUDA for practical performance. Complete these steps once per machine:</p>
-      <ol style="color:#adb5af;line-height:2;padding-left:20px">
-        <li>Install the latest NVIDIA GPU driver for your card (RTX 30xx/40xx/50xx series).</li>
-        <li>Verify the driver: <code>nvidia-smi</code> — note the CUDA version shown in the top-right corner.</li>
-        <li>Install the matching PyTorch CUDA wheel from <a href="https://pytorch.org/get-started/locally/" style="color:#70df7f" target="_blank" rel="noreferrer">pytorch.org/get-started/locally</a></li>
-        <li>Run <code>textlens doctor</code> to confirm the full stack is detected correctly.</li>
-      </ol>
-      <div class="note">
-        <strong>You do not need the full CUDA Toolkit</strong>
-        <p>The PyTorch CUDA wheel includes the required runtime libraries. Only the NVIDIA GPU driver is a system-level requirement.</p>
-      </div>
+    <section id="quickstart">
+      <h2>Quickstart<a class="anchor" href="#quickstart">#</a></h2>
+      <p>Create an <code>OCR</code> object once and call it on any file. The first call downloads the default model (about 31 MB) and verifies its SHA-256.</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre><span class="k">from</span> textlens <span class="k">import</span> OCR
+
+ocr = OCR()
+result = ocr(<span class="s">"invoice.pdf"</span>)      <span class="c"># path, URL, bytes, file object, PIL image or numpy array</span>
+
+<span class="f">print</span>(result.text)
+<span class="f">print</span>(result.to_markdown())
+result.save(<span class="s">"output/"</span>)             <span class="c"># .json, .md, .txt and tables as .csv</span></pre></div>
+      <p>The same from the command line:</p>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>textlens ocr invoice.pdf
+textlens ocr invoice.pdf -f markdown -o invoice.md
+textlens setup           <span class="c"># optional: detect hardware, choose a profile, install models</span></pre></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/getting-started/quickstart.md" target="_blank" rel="noopener">Quickstart guide →</a>
     </section>
 
-    <section id="ocr">
-      <h2>Basic OCR</h2>
-      <p>The <code>OCR</code> class is the main entry point. It auto-detects CUDA and loads the selected model on first use.</p>
-      <div class="code-block"><span class="t-kw">from</span> textlens <span class="t-kw">import</span> OCR
+    <section id="config">
+      <h2>Configuration<a class="anchor" href="#config">#</a></h2>
+      <p>Settings come from arguments first, then environment variables, then the config file written by <code>textlens setup</code>.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>TEXTLENS_HOME</td><td><code>~/.cache/textlens</code></td><td>Base folder for models, cache and config</td></tr>
+          <tr><td>TEXTLENS_MODELS_DIR</td><td><code>$TEXTLENS_HOME/models</code></td><td>Where model weights are stored</td></tr>
+          <tr><td>TEXTLENS_PROFILE</td><td>auto</td><td>Default routing profile</td></tr>
+          <tr><td>TEXTLENS_DEVICE</td><td>auto</td><td><code>cpu</code>, <code>cuda</code>, <code>cuda:N</code>, <code>tensorrt</code>, <code>coreml</code>, <code>dml</code></td></tr>
+          <tr><td>TEXTLENS_OFFLINE</td><td>0</td><td><code>1</code> turns every download into an error with instructions</td></tr>
+          <tr><td>TEXTLENS_RESULT_CACHE</td><td>memory</td><td>Result cache: <code>off</code>, <code>memory</code> or <code>disk</code></td></tr>
+          <tr><td>TEXTLENS_NO_PERSIST</td><td>0</td><td><code>1</code> never writes results to disk</td></tr>
+          <tr><td>TEXTLENS_MAX_PAGES / _MAX_FILE_MB</td><td>—</td><td>Input limits</td></tr>
+          <tr><td>TEXTLENS_ALLOW_URLS</td><td>1</td><td>Accept <code>http(s)</code> inputs in Python and the CLI (the server has its own switch)</td></tr>
+          <tr><td>TEXTLENS_LOG_LEVEL / _LOG_FORMAT</td><td>WARNING / text</td><td><code>json</code> for structured logs</td></tr>
+          <tr><td>TEXTLENS_OPENAI_BASE_URL</td><td>—</td><td>Inference server for served models (vLLM…)</td></tr>
+        </tbody>
+      </table></div>
+      <p>Server-only settings (API keys, workers, rate limits) are listed under <a href="#server">REST API</a>.</p>
+    </section>
 
-<span class="t-cmt"># Auto-detects CUDA</span>
-ocr = OCR(model=<span class="t-str">"glm-ocr"</span>)
+    <section id="troubleshooting">
+      <h2>Troubleshooting<a class="anchor" href="#troubleshooting">#</a></h2>
+      <p>Start with <code>textlens doctor</code> (add <code>--deep</code> to also check that CUDA works in PyTorch). Every error has a code and a <em>Hint</em> line with the next step.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>No matching distribution for <code>textlens</code></td><td>The package is <code>textlens-ocr</code>.</td></tr>
+          <tr><td>onnxruntime fails on a Raspberry Pi</td><td>Use a 64-bit OS; there are no 32-bit ARM wheels.</td></tr>
+          <tr><td>A scanned PDF returns empty text</td><td>Run <code>textlens inspect file.pdf</code>; force OCR with <code>OCR(ocr="force")</code> or <code>--ocr force</code>.</td></tr>
+          <tr><td>GPU present but runs on CPU</td><td>Your PyTorch is a CPU build. <code>textlens doctor</code> prints the CUDA install command.</td></tr>
+          <tr><td>PP-OCR should use the GPU</td><td><code>pip uninstall -y onnxruntime &amp;&amp; pip install onnxruntime-gpu</code> — never both.</td></tr>
+          <tr><td>CUDA out of memory</td><td>Use a smaller profile or <code>OCR(memory_budget_gb=4)</code>.</td></tr>
+          <tr><td>Low-confidence pages</td><td><code>result.pages_needing_review()</code> lists them; add a fallback model.</td></tr>
+        </tbody>
+      </table></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/getting-started/troubleshooting.md" target="_blank" rel="noopener">All troubleshooting tips →</a>
+    </section>
 
-<span class="t-cmt"># Read an image</span>
-text = ocr.read(<span class="t-str">"invoice.png"</span>)
-print(text)
+    <!-- ── Guides ──────────────────────────────────────── -->
+    <section id="results">
+      <h2>Results &amp; exports<a class="anchor" href="#results">#</a></h2>
+      <p>Every call returns a <code>Result</code> with the same shape, whichever model produced it: <strong>pages → blocks → lines → words</strong>, plus tables and formulas. Every element has a bounding box (top-left origin; PDF pages in points) and a confidence score.</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>result = OCR()(<span class="s">"report.pdf"</span>)
 
-<span class="t-cmt"># Read from URL</span>
-text = ocr.read(<span class="t-str">"https://example.com/scan.png"</span>)
+result.text, result.confidence, result.page_count
+<span class="k">for</span> page <span class="k">in</span> result.pages:
+    <span class="f">print</span>(page.number, page.provenance.source, page.provenance.model, page.provenance.reasons)
+    <span class="k">for</span> block <span class="k">in</span> page.ordered_blocks():
+        <span class="f">print</span>(block.type, block.bbox, block.text[:60])
 
-<span class="t-cmt"># Force a specific device</span>
-ocr = OCR(model=<span class="t-str">"glm-ocr"</span>, device=<span class="t-str">"cuda"</span>)</div>
+<span class="k">for</span> table <span class="k">in</span> result.tables:
+    table.to_csv(), table.to_markdown(), table.to_records()
 
-      <h3>OCR() parameters</h3>
-      <div class="table-wrapper">
-        <table class="doc-table">
-          <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
-          <tr><td>model</td><td>str</td><td>"glm-ocr"</td><td>Model ID from the TextLens catalog</td></tr>
-          <tr><td>device</td><td>str</td><td>None (auto)</td><td>Force "cuda" or "cpu"</td></tr>
-          <tr><td>max_new_tokens</td><td>int</td><td>2048</td><td>Max tokens generated per page</td></tr>
-        </table>
-      </div>
+result.to_markdown(page_markers=<span class="k">True</span>)
+result.to_html()
+result.to_json()                   <span class="c"># Result.from_json() reads it back</span>
+result.save(<span class="s">"output/"</span>)</pre></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/concepts/results.md" target="_blank" rel="noopener">The result schema →</a>
     </section>
 
     <section id="pdf">
-      <h2>PDF processing</h2>
-      <p>Every backend supports PDF input natively through the unified <code>load_input_images</code> utility.</p>
-      <div class="code-block"><span class="t-kw">from</span> textlens <span class="t-kw">import</span> OCR
+      <h2>PDFs &amp; selective OCR<a class="anchor" href="#pdf">#</a></h2>
+      <p>Before anything is rendered, TextLens inspects each PDF page. Pages with a good text layer are extracted directly — exact and fast. Only pages that need it are OCR'd, and each decision has a reason code.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Reason</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>scanned</td><td>The page is an image with no usable text</td></tr>
+          <tr><td>no_text</td><td>No text layer at all</td></tr>
+          <tr><td>vector_text</td><td>Text drawn as paths (outlined fonts)</td></tr>
+          <tr><td>invisible_text_layer</td><td>A scanner's hidden OCR layer over an image</td></tr>
+          <tr><td>suspected_garbled_text</td><td>Broken font encoding — the text would be gibberish</td></tr>
+          <tr><td>sparse_text_over_image</td><td>A few words over a mostly-image page</td></tr>
+        </tbody>
+      </table></div>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre><span class="k">import</span> textlens
+<span class="k">from</span> textlens <span class="k">import</span> OCR
 
-ocr = OCR(model=<span class="t-str">"glm-ocr"</span>)
+ocr = OCR()
+<span class="f">print</span>(ocr.inspect(<span class="s">"report.pdf"</span>).summary())    <span class="c"># no rendering, no OCR</span>
 
-<span class="t-cmt"># All pages</span>
-text = ocr.read(<span class="t-str">"report.pdf"</span>)
+ocr(<span class="s">"report.pdf"</span>, pages=<span class="s">"1-3"</span>)                  <span class="c"># a page range</span>
+OCR(ocr=<span class="s">"force"</span>)(<span class="s">"report.pdf"</span>)                <span class="c"># OCR every page</span>
+OCR(ocr=<span class="s">"off"</span>)(<span class="s">"report.pdf"</span>)                  <span class="c"># native text only</span>
 
-<span class="t-cmt"># Specific page (1-indexed)</span>
-text = ocr.read(<span class="t-str">"report.pdf"</span>, page=<span class="t-num">1</span>)
+<span class="k">for</span> page <span class="k">in</span> ocr.stream(<span class="s">"big.pdf"</span>):             <span class="c"># constant memory</span>
+    <span class="f">print</span>(page.number, <span class="f">len</span>(page.text))
 
-<span class="t-cmt"># Multiple pages, custom DPI</span>
-text = ocr.read(<span class="t-str">"report.pdf"</span>, page=[<span class="t-num">1</span>, <span class="t-num">2</span>, <span class="t-num">3</span>], dpi=<span class="t-num">300</span>)</div>
-
-      <p>Multi-page output is formatted as:</p>
-      <div class="code-block">--- Page 1 ---
-extracted text from page one...
-
---- Page 2 ---
-extracted text from page two...</div>
+doc = textlens.load(<span class="s">"big.pdf"</span>)                   <span class="c"># lazy: only touched pages run</span>
+doc.page(<span class="n">12</span>).text</pre></div>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>textlens inspect report.pdf
+textlens inspect report.pdf --overlay out/   <span class="c"># draw blocks in reading order</span>
+textlens ocr report.pdf --ocr force</pre></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/tasks/pdf.md" target="_blank" rel="noopener">PDF guide →</a>
     </section>
 
-    <section id="batch">
-      <h2>BatchOCR</h2>
-      <p>Process an entire folder of PDFs and images in parallel. TextLens handles queuing, workers, retries, structured exports, and a live monitoring dashboard at <code>http://localhost:8765</code>.</p>
+    <section id="routing">
+      <h2>Profiles &amp; routing<a class="anchor" href="#routing">#</a></h2>
+      <p>You normally never name a model. For each page that needs OCR, the router chooses a primary model and a fallback chain from what is installed and what your hardware can run.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Profile</th><th>Use it when</th><th>Behaviour</th></tr></thead>
+        <tbody>
+          <tr><td>auto</td><td>Default</td><td>Picks one of the profiles below from your hardware and installed models</td></tr>
+          <tr><td>edge</td><td>Raspberry Pi, Jetson, low RAM</td><td>ONNX PP-OCR only, 150 dpi, small detector input</td></tr>
+          <tr><td>fast</td><td>CPU laptops, high volume</td><td>PP-OCR on CPU or GPU, 200 dpi</td></tr>
+          <tr><td>balanced</td><td>A GPU with a VLM installed</td><td>PP-OCR for simple pages, a VLM for tables, formulas and hard pages</td></tr>
+          <tr><td>accurate</td><td>Quality first</td><td>Best installed model first, lighter ones as fallback</td></tr>
+          <tr><td>document</td><td>PDF → structured Markdown</td><td>Generative document models first</td></tr>
+          <tr><td>server</td><td>An inference server is configured</td><td>Prefers the remote endpoint, high concurrency</td></tr>
+        </tbody>
+      </table></div>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>OCR(profile=<span class="s">"balanced"</span>)
+OCR(quality=<span class="s">"high"</span>)                        <span class="c"># shorthand for accurate under auto</span>
+OCR(latency_budget_ms=<span class="n">500</span>, memory_budget_gb=<span class="n">4</span>)
+OCR(commercial_only=<span class="k">True</span>)                 <span class="c"># skip models with restrictive licenses</span>
+OCR(fallback_models=[<span class="s">"glm-ocr"</span>], min_confidence=<span class="n">0.85</span>)
 
-      <div class="code-block"><span class="t-kw">from</span> textlens.batch <span class="t-kw">import</span> BatchOCR
-
-batch = BatchOCR(
-    model=<span class="t-str">"glm-ocr"</span>,
-    workers=<span class="t-num">1</span>,              <span class="t-cmt"># 1 worker per GPU to avoid VRAM duplication</span>
-    output_format=<span class="t-str">"json"</span>,    <span class="t-cmt"># json | markdown | csv | txt</span>
-    output_dir=<span class="t-str">"./results"</span>,
-    retries=<span class="t-num">2</span>,
-    enable_dashboard=<span class="t-kw">True</span>,   <span class="t-cmt"># http://localhost:8765</span>
-)
-
-results = batch.run(<span class="t-str">"./documents"</span>)</div>
-
-      <h3>BatchOCR parameters</h3>
-      <div class="table-wrapper">
-        <table class="doc-table">
-          <tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
-          <tr><td>model</td><td>"glm-ocr"</td><td>Model ID to use for OCR</td></tr>
-          <tr><td>workers</td><td>4</td><td>Parallel worker threads</td></tr>
-          <tr><td>output_format</td><td>"json"</td><td>json | markdown | csv | txt</td></tr>
-          <tr><td>output_dir</td><td>"./batch_output"</td><td>Directory to save results</td></tr>
-          <tr><td>retries</td><td>2</td><td>Retry limit per failed file</td></tr>
-          <tr><td>dpi</td><td>200</td><td>PDF render resolution</td></tr>
-          <tr><td>device</td><td>None (auto)</td><td>Force "cuda" or "cpu"</td></tr>
-          <tr><td>enable_dashboard</td><td>True</td><td>Launch live monitoring dashboard</td></tr>
-          <tr><td>dashboard_port</td><td>8765</td><td>Dashboard HTTP port</td></tr>
-          <tr><td>recursive</td><td>True</td><td>Scan subdirectories</td></tr>
-        </table>
-      </div>
-
-      <h3>Job controls</h3>
-      <div class="code-block"><span class="t-cmt"># Available while a batch job is running</span>
-batch.pause()          <span class="t-cmt"># In-flight tasks finish, new ones wait</span>
-batch.resume()         <span class="t-cmt"># Resume from paused state</span>
-batch.cancel()         <span class="t-cmt"># Stop workers after current task</span>
-batch.retry_failed()   <span class="t-cmt"># Re-queue all permanently failed files</span>
-
-<span class="t-cmt"># Runtime reconfiguration — no restart needed</span>
-batch.reconfigure(workers=<span class="t-num">2</span>)
-batch.reconfigure(output_format=<span class="t-str">"markdown"</span>)</div>
-
-      <h3>Callbacks</h3>
-      <div class="code-block"><span class="t-kw">def</span> <span class="t-fn">on_done</span>(task):
-    print(<span class="t-str">f"Done: {task.source_path.name} — {task.duration_sec:.2f}s"</span>)
-
-<span class="t-kw">def</span> <span class="t-fn">on_fail</span>(task):
-    print(<span class="t-str">f"Failed: {task.source_path.name} — {task.error}"</span>)
-
-results = batch.run(<span class="t-str">"./docs"</span>,
-    on_file_complete=on_done,
-    on_file_failed=on_fail,
-)</div>
-
-      <div class="note">
-        <strong>GPU VRAM tip</strong>
-        <p>Use <code>workers=1</code> on a single GPU. Each worker loads a full copy of the model — two workers on a 6 GB GPU will likely cause an out-of-memory error.</p>
-      </div>
-    </section>
-
-    <section id="doctor">
-      <h2>TextLens Doctor</h2>
-      <p>Run <code>textlens doctor</code> before downloading any model. It checks CUDA availability, GPU model, VRAM, PyTorch installation, CPU, RAM, and recommends which TextLens models are compatible with your machine.</p>
-      <div class="code-block">$ textlens doctor
-
-  GPU    NVIDIA GeForce RTX 4050 Laptop GPU
-  VRAM   6.0 GB  ✓ Available
-  CUDA   ✓ PyTorch CUDA enabled
-  RAM    16 GB
-
-  Model recommendations:
-    ✓  glm-ocr    — compatible (needs 6 GB)
-    !  lighton-ocr — needs 8 GB VRAM
-    !  hunyuan-ocr — needs 8 GB VRAM
-    ✓  smolvlm    — compatible (needs 2 GB)</div>
-
-      <div class="code-block"><span class="t-cmt"># Python API equivalent</span>
-<span class="t-kw">import</span> textlens
-
-info = textlens.get_hardware_info()
-print(info.gpu_name, info.vram_gb)</div>
-    </section>
-
-    <section id="discover">
-      <h2>Live model discovery</h2>
-      <p>Requires the <code>catalog</code> extra. Searches Hugging Face by model name and compares published parameter counts and VRAM requirements against your detected hardware.</p>
-      <div class="code-block"><span class="t-cmt"># Interactive search (prompts for model name)</span>
-$ textlens discover
-
-<span class="t-cmt"># Direct name search</span>
-$ textlens discover GLM-OCR --compatible-only
-$ textlens discover DeepSeek-OCR --limit 5
-$ textlens discover PaddleOCR-VL --include-unknown
-
-<span class="t-cmt"># Force a fresh fetch (bypasses 15-minute cache)</span>
-$ textlens discover GLM-OCR --refresh</div>
-
-      <div class="note">
-        <strong>Model names only</strong>
-        <p>Discovery searches by model name, not use-case keywords. Enter a real model name such as <code>GLM-OCR</code>, <code>DeepSeek-OCR</code>, or <code>LightOnOCR</code>.</p>
-      </div>
-    </section>
-
-    <section id="server">
-      <h2>REST API server</h2>
-      <p>Requires the <code>server</code> extra. Launches a FastAPI service with automatic Swagger documentation.</p>
-      <div class="code-block"><span class="t-kw">import</span> textlens
-
-textlens.serve(host=<span class="t-str">"127.0.0.1"</span>, port=<span class="t-num">8000</span>)</div>
-
-      <p>Open <code>http://127.0.0.1:8000/docs</code> for the interactive Swagger UI.</p>
-
-      <h3>POST /api/v1/ocr — file upload</h3>
-      <div class="code-block"><span class="t-cmt"># cURL</span>
-curl -X POST "http://localhost:8000/api/v1/ocr" \
-  -F "file=@invoice.png" \
-  -F "prompt=Text Recognition:"
-
-<span class="t-cmt"># Python</span>
-<span class="t-kw">import</span> requests
-
-<span class="t-kw">with</span> <span class="t-fn">open</span>(<span class="t-str">"invoice.png"</span>, <span class="t-str">"rb"</span>) <span class="t-kw">as</span> f:
-    r = requests.post(<span class="t-str">"http://localhost:8000/api/v1/ocr"</span>, files={<span class="t-str">"file"</span>: f})
-    print(r.json()[<span class="t-str">"text"</span>])</div>
-    </section>
-
-    <section id="cli">
-      <h2>CLI reference</h2>
-      <p>All commands are available as <code>textlens &lt;command&gt;</code> after installation.</p>
-      <div class="table-wrapper">
-        <table class="doc-table">
-          <tr><th>Command</th><th>Description</th></tr>
-          <tr><td>textlens models</td><td>List the official TextLens model catalog with VRAM and install status</td></tr>
-          <tr><td>textlens model install &lt;id&gt;</td><td>Download and cache a model from Hugging Face</td></tr>
-          <tr><td>textlens model remove &lt;id&gt;</td><td>Delete a cached model from disk</td></tr>
-          <tr><td>textlens model info &lt;id&gt;</td><td>Show model metadata, disk usage, and hardware requirements</td></tr>
-          <tr><td>textlens doctor</td><td>Inspect GPU, CUDA, VRAM, PyTorch, and get model recommendations</td></tr>
-          <tr><td>textlens discover [name]</td><td>Search Hugging Face live for OCR/VLM models by name</td></tr>
-          <tr><td>textlens read &lt;file&gt;</td><td>Run OCR on an image, PDF, or URL and print the result</td></tr>
-          <tr><td>textlens batch &lt;dir&gt;</td><td>Batch process a folder with parallel workers and live dashboard</td></tr>
-          <tr><td>textlens serve</td><td>Launch the OCR REST API at localhost:8000</td></tr>
-        </table>
-      </div>
-
-      <h3>batch flags</h3>
-      <div class="code-block">textlens batch ./documents \
-  --model glm-ocr \
-  --workers 1 \
-  --format json \
-  --output ./results \
-  --retries 2 \
-  --dpi 200 \
-  --port 8765 \
-  --no-dashboard     # disable the live dashboard
-  --no-recursive     # do not scan subdirectories</div>
+<span class="k">for</span> decision <span class="k">in</span> OCR().explain(<span class="s">"scan.pdf"</span>):  <span class="c"># dry run: why each model was chosen</span>
+    <span class="f">print</span>(decision.explain())</pre></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/concepts/routing.md" target="_blank" rel="noopener">How routing works →</a>
     </section>
 
     <section id="models">
-      <h2>Supported models</h2>
-      <div class="note">
-        <strong>VLM-powered — NVIDIA CUDA GPU required</strong>
-        <p>All supported models are vision-language models. A CUDA-capable NVIDIA GPU is strongly recommended. CPU fallback is available but significantly slower.</p>
-      </div>
-      <div class="table-wrapper">
-        <table class="doc-table">
-          <tr><th>Model ID</th><th>Hugging Face Repo</th><th>Parameters</th><th>Min VRAM</th><th>Best for</th></tr>
-          <tr>
-            <td>glm-ocr <span class="badge badge-default">Default</span></td>
-            <td>zai-org/GLM-OCR</td><td>0.9B</td><td>6 GB</td>
-            <td>General OCR, invoices, receipts, tables</td>
-          </tr>
-          <tr>
-            <td>lighton-ocr</td>
-            <td>lightonai/LightOnOCR-2-1B</td><td>1B</td><td>8 GB</td>
-            <td>Scientific documents, academic papers</td>
-          </tr>
-          <tr>
-            <td>hunyuan-ocr</td>
-            <td>tencent/HunyuanOCR</td><td>~1B</td><td>8 GB</td>
-            <td>Enterprise documents, charts, layouts</td>
-          </tr>
-          <tr>
-            <td>smolvlm</td>
-            <td>HuggingFaceTB/SmolVLM-256M-Instruct</td><td>256M</td><td>2 GB</td>
-            <td>Low-VRAM devices, quick prototyping</td>
-          </tr>
-        </table>
-      </div>
-
-      <p>Use <code>textlens models</code> to see which models are installed on your system.</p>
+      <h2>Models<a class="anchor" href="#models">#</a></h2>
+      <p>A small, curated catalog covers different hardware and tasks. Each model has a card with its capabilities, hardware needs, license and known limitations.</p>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>textlens models list                 <span class="c"># catalog + install status</span>
+textlens models search table
+textlens models info glm-ocr         <span class="c"># model card: hardware, license, limitations</span>
+textlens models install glm-ocr
+textlens models verify ppocrv6-small <span class="c"># re-check SHA-256</span>
+textlens models remove glm-ocr</pre></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Model</th><th>Runs on</th><th>Tasks</th><th>License</th></tr></thead>
+        <tbody>
+          <tr><td>ppocrv6-small <span class="badge green">default</span></td><td>Any CPU, Pi, Jetson</td><td>Text lines, boxes, confidence</td><td>Apache-2.0</td></tr>
+          <tr><td>glm-ocr</td><td>GPU ≥ 4 GB</td><td>Text, tables, formulas, Markdown</td><td>MIT</td></tr>
+          <tr><td>lighton-ocr</td><td>GPU ≥ 6 GB</td><td>Text, tables, formulas, Markdown</td><td>Apache-2.0</td></tr>
+          <tr><td>hunyuan-ocr</td><td>GPU ≥ 6 GB</td><td>Layouts, charts, extraction</td><td>Tencent community (restricted)</td></tr>
+          <tr><td>smolvlm</td><td>CPU or small GPU</td><td>Rough text</td><td>Apache-2.0</td></tr>
+          <tr><td>paddleocr-vl <span class="badge amber">served</span></td><td>GPU server (vLLM…)</td><td>Text, tables, formulas, charts; 100+ languages</td><td>Apache-2.0</td></tr>
+          <tr><td>deepseek-ocr-2 <span class="badge amber">served</span></td><td>GPU server ≥ 10 GB</td><td>Dense long documents</td><td>Apache-2.0</td></tr>
+          <tr><td>deepseek-ocr <span class="badge amber">served</span></td><td>GPU server ≥ 10 GB</td><td>Documents</td><td>MIT</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Served</strong> models run in an inference server such as vLLM or SGLang. Point TextLens at it:</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>OCR(model=<span class="s">"paddleocr-vl"</span>, endpoint=<span class="s">"http://gpu-box:8000/v1"</span>)</pre></div>
+      <div class="callout warn"><strong>Check licenses before commercial use.</strong> Model weights are downloaded separately under their own licenses; <code>textlens models info &lt;name&gt;</code> prints the license and notes.</div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/concepts/models.md" target="_blank" rel="noopener">Model catalog →</a>
     </section>
 
-    <section id="faq">
-      <h2>FAQ</h2>
+    <section id="extraction">
+      <h2>Field extraction<a class="anchor" href="#extraction">#</a></h2>
+      <p>Describe the fields you want; TextLens returns typed values with the page and box each was found at. It uses local heuristics by default and a VLM when one is installed.</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>schema = {<span class="s">"vendor"</span>: <span class="s">"string"</span>, <span class="s">"invoice_number"</span>: <span class="s">"string"</span>, <span class="s">"date"</span>: <span class="s">"date"</span>, <span class="s">"total"</span>: <span class="s">"float"</span>}
+ext = OCR().extract(<span class="s">"invoice.pdf"</span>, schema=schema)
 
-      <h3>Is TextLens cloud-based?</h3>
-      <p>No. TextLens is designed for local OCR. Images and PDFs are processed on your machine by the model you configure. No data leaves your computer.</p>
-
-      <h3>Do I need an NVIDIA GPU?</h3>
-      <p>Most supported engines are VLMs so an NVIDIA CUDA GPU is strongly recommended. CPU fallback exists but is substantially slower, especially for multi-page PDFs and batch workloads.</p>
-
-      <h3>Does BatchOCR support PDFs?</h3>
-      <p>Yes. All four backends support PDF input. PDF pages are rendered to images internally at the configured DPI before inference.</p>
-
-      <h3>Can I use TextLens without downloading models first?</h3>
-      <p>Models are downloaded from Hugging Face on first use and cached locally. Use <code>textlens model install &lt;id&gt;</code> to pre-download a model before running a job.</p>
-
-      <h3>What is the fastest model?</h3>
-      <p><code>smolvlm</code> is the fastest and uses the least VRAM (256M parameters, 2 GB). For accuracy-critical workloads, <code>glm-ocr</code> is the recommended default.</p>
+ext.data                 <span class="c"># {"vendor": ..., "date": ..., "total": ...}</span>
+ext.method               <span class="c"># how the values were found</span>
+ext.fields[<span class="s">"total"</span>]      <span class="c"># found, page, bbox</span></pre></div>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>textlens extract invoice.pdf -s <span class="s">"invoice_number,date,total"</span></pre></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/tasks/extraction.md" target="_blank" rel="noopener">Extraction guide →</a>
     </section>
 
-    <footer class="doc-footer">
-      <span>&copy; 2026 TextLens Documentation. MIT Licensed.</span>
-      <a href="index.html">&larr; Back to TextLens Home</a>
-    </footer>
+    <section id="rag">
+      <h2>RAG chunks<a class="anchor" href="#rag">#</a></h2>
+      <p>Turn any document into section-aware chunks with page numbers and bounding boxes, ready for a vector store and for showing citations.</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>result = OCR()(<span class="s">"handbook.pdf"</span>)
+chunks = result.to_chunks(max_tokens=<span class="n">400</span>, overlap_tokens=<span class="n">40</span>, strategy=<span class="s">"semantic"</span>)
 
-  </main>
+records = [
+    {
+        <span class="s">"text"</span>: c.text,
+        <span class="s">"metadata"</span>: {<span class="s">"pages"</span>: c.pages, <span class="s">"section"</span>: <span class="s">" &gt; "</span>.join(c.section), <span class="s">"boxes"</span>: c.bboxes},
+    }
+    <span class="k">for</span> c <span class="k">in</span> chunks
+]</pre></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/tasks/rag.md" target="_blank" rel="noopener">RAG guide →</a>
+    </section>
 
-  <!-- ── Right TOC ──────────────────────────────── -->
-  <aside class="toc">
-    <p>ON THIS PAGE</p>
-    <a href="#what">What is TextLens?</a>
-    <a href="#problem">Problem solved</a>
-    <a href="#install">Installation</a>
-    <a href="#cuda">CUDA setup</a>
-    <a href="#ocr">Basic OCR</a>
-    <a href="#pdf">PDF processing</a>
-    <a href="#batch">BatchOCR</a>
-    <a href="#doctor">Doctor</a>
-    <a href="#discover">Discovery</a>
-    <a href="#server">REST API</a>
-    <a href="#cli">CLI reference</a>
-    <a href="#models">Models</a>
-    <a href="#faq">FAQ</a>
+    <section id="batch">
+      <h2>Batch processing<a class="anchor" href="#batch">#</a></h2>
+      <p>Process folders, globs or lists. One model copy is shared across files; errors are returned per file instead of stopping the run.</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>results = OCR().batch(<span class="s">"./documents"</span>, workers=<span class="n">4</span>)
+<span class="k">for</span> r <span class="k">in</span> results:
+    <span class="k">if</span> <span class="f">isinstance</span>(r, Exception):
+        <span class="f">print</span>(<span class="s">"failed:"</span>, r)
+    <span class="k">else</span>:
+        <span class="f">print</span>(r.metadata[<span class="s">"source_name"</span>], r.page_count)</pre></div>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>textlens batch ./documents -o results/                  <span class="c"># opens a live dashboard</span>
+textlens batch ./documents -o results/ --no-dashboard</pre></div>
+      <p>The dashboard shows jobs, logs and CPU/RAM/GPU telemetry, lets you pause, resume and retry, and exports a PDF report.</p>
+    </section>
+
+    <section id="anpr">
+      <h2>Number plates (ANPR)<a class="anchor" href="#anpr">#</a></h2>
+      <p>An optional pipeline for vehicle number plates: detection, recognition, region format validation and, for video, tracking with voting across frames.</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre><span class="c"># pip install "textlens-ocr[anpr]"</span>
+<span class="k">from</span> textlens <span class="k">import</span> ANPR
+
+anpr = ANPR(profile=<span class="s">"balanced"</span>, region=<span class="s">"in"</span>)
+<span class="k">for</span> plate <span class="k">in</span> anpr(<span class="s">"car.jpg"</span>).plates:
+    <span class="f">print</span>(plate.plate, plate.confidence, plate.valid)</pre></div>
+      <p>Regions: <code>generic</code>, <code>in</code>, <code>uk</code>, <code>de</code>, <code>fr</code>, <code>it</code>, <code>es</code>, <code>nl</code>, <code>eu</code>, <code>us</code>, <code>br</code>, <code>ae</code>, or your own JSON/YAML format file.</p>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/tasks/anpr.md" target="_blank" rel="noopener">ANPR guide →</a>
+    </section>
+
+    <!-- ── Reference ───────────────────────────────────── -->
+    <section id="cli">
+      <h2>CLI<a class="anchor" href="#cli">#</a></h2>
+      <p>Run <code>textlens &lt;command&gt; --help</code> for all options.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td>textlens ocr FILE…</td><td>OCR images and documents (selective OCR, routed models). <code>-f text|markdown|html|json</code>, <code>-o</code>, <code>--pages</code>, <code>--ocr</code>, <code>--profile</code>, <code>--model</code></td></tr>
+          <tr><td>textlens document FILE</td><td>Structure-first conversion to Markdown, JSON or HTML</td></tr>
+          <tr><td>textlens inspect FILE</td><td>Which pages need OCR and why, without OCR. <code>--overlay DIR</code></td></tr>
+          <tr><td>textlens extract FILE -s …</td><td>Extract fields to JSON</td></tr>
+          <tr><td>textlens batch DIR -o OUT</td><td>Process a folder, with an optional live dashboard</td></tr>
+          <tr><td>textlens models …</td><td><code>list</code>, <code>search</code>, <code>info</code>, <code>install</code>, <code>remove</code>, <code>verify</code>, <code>path</code></td></tr>
+          <tr><td>textlens doctor</td><td>Diagnose hardware, runtimes and model fit. <code>--deep</code>, <code>--json</code></td></tr>
+          <tr><td>textlens setup</td><td>Guided setup: detect hardware, choose a profile, install models</td></tr>
+          <tr><td>textlens serve</td><td>Run the REST API server</td></tr>
+          <tr><td>textlens mcp</td><td>Run the MCP server for AI agents</td></tr>
+          <tr><td>textlens benchmark</td><td>Compare models on your own labelled data (CER, WER, latency, memory)</td></tr>
+          <tr><td>textlens profile FILE</td><td>Per-stage timings, model load time, peak RAM/VRAM</td></tr>
+          <tr><td>textlens anpr FILE</td><td>Number-plate recognition</td></tr>
+          <tr><td>textlens cache</td><td>Result cache stats or clear</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="api">
+      <h2>Python API<a class="anchor" href="#api">#</a></h2>
+      <p>Everything public is importable from <code>textlens</code>. Importing it loads no ML runtime — models load on first use.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Call</th><th>Returns</th></tr></thead>
+        <tbody>
+          <tr><td>ocr(source, **overrides)</td><td><code>Result</code>. Overrides: <code>pages</code>, <code>ocr</code>, <code>task</code>, <code>prompt</code>, <code>cache</code>…</td></tr>
+          <tr><td>ocr.document(source)</td><td><code>Result</code> using the Markdown task</td></tr>
+          <tr><td>ocr.stream(source)</td><td>Iterator of <code>Page</code>, constant memory</td></tr>
+          <tr><td>ocr.batch(sources, workers=None)</td><td>List of <code>Result</code> or exception per input</td></tr>
+          <tr><td>ocr.inspect(source)</td><td>Page classification for PDFs, signals for images</td></tr>
+          <tr><td>ocr.explain(source)</td><td>Routing decisions, no OCR</td></tr>
+          <tr><td>ocr.extract(source, schema)</td><td><code>Extraction(data, fields, method, result)</code></td></tr>
+          <tr><td>ocr.read(source)</td><td><code>str</code> — the 0.x API</td></tr>
+          <tr><td>ocr.warmup() / ocr.unload()</td><td>Load or free models</td></tr>
+          <tr><td>textlens.load(source)</td><td>Lazy <code>Document</code></td></tr>
+          <tr><td>textlens.inspect_system()</td><td>Hardware and runtime report</td></tr>
+        </tbody>
+      </table></div>
+      <p>Common <code>OCR(...)</code> arguments: <code>model</code>, <code>profile</code>, <code>device</code>, <code>ocr</code>, <code>dpi</code>, <code>task</code>, <code>endpoint</code>, <code>fallback_models</code>, <code>min_confidence</code>, <code>latency_budget_ms</code>, <code>memory_budget_gb</code>, <code>commercial_only</code>, <code>cache</code>, <code>password</code>.</p>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/API_REFERENCE.md" target="_blank" rel="noopener">Full API reference →</a>
+    </section>
+
+    <section id="server">
+      <h2>REST API<a class="anchor" href="#server">#</a></h2>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>pip install <span class="s">"textlens-ocr[server]"</span>
+textlens serve                                            <span class="c"># http://127.0.0.1:8000, docs at /docs</span>
+TEXTLENS_API_KEYS=k1,k2 textlens serve --host 0.0.0.0 --workers 2 --warmup
+
+curl -H <span class="s">"X-API-Key: k1"</span> -F file=@scan.pdf localhost:8000/ocr
+curl -H <span class="s">"X-API-Key: k1"</span> -F file=@scan.pdf -F format=markdown -F pages=1-3 localhost:8000/ocr
+curl -H <span class="s">"X-API-Key: k1"</span> -F file=@invoice.pdf -F <span class="s">'schema={"total":"float","date":"date"}'</span> localhost:8000/extract
+curl -H <span class="s">"X-API-Key: k1"</span> -F file=@big.pdf -F async=true localhost:8000/ocr     <span class="c"># → {"job_id": "…"}</span></pre></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>POST /ocr</td><td>Image, PDF, DOCX or PPTX → result (<code>format=json|text|markdown|html</code>)</td></tr>
+          <tr><td>POST /document</td><td>Structure-first processing (Markdown by default)</td></tr>
+          <tr><td>POST /extract</td><td><code>schema</code> → JSON fields</td></tr>
+          <tr><td>POST /inspect</td><td>PDF classification, no OCR</td></tr>
+          <tr><td>POST /batch</td><td>Many files → async job</td></tr>
+          <tr><td>GET /jobs/{id}, /jobs/{id}/result</td><td>Job status and result; <code>DELETE</code> cancels</td></tr>
+          <tr><td>GET /models, /system</td><td>Catalog and hardware status</td></tr>
+          <tr><td>GET /health, /ready, /metrics</td><td>Liveness, readiness, Prometheus metrics</td></tr>
+          <tr><td>POST /v1/chat/completions</td><td>OpenAI-compatible facade</td></tr>
+        </tbody>
+      </table></div>
+      <p>Key settings: <code>TEXTLENS_API_KEYS</code> (auth is off when empty), <code>TEXTLENS_WORKERS</code>, <code>TEXTLENS_MAX_QUEUE</code>, <code>TEXTLENS_MAX_UPLOAD_MB</code>, <code>TEXTLENS_RATE_LIMIT</code>, <code>TEXTLENS_CORS_ORIGINS</code>. A full queue returns <code>503</code> with <code>Retry-After</code>.</p>
+      <div class="callout warn"><strong>Exposing the server?</strong> Always set <code>TEXTLENS_API_KEYS</code> and put it behind TLS. See the security guide before accepting URL inputs.</div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/deployment/server.md" target="_blank" rel="noopener">Server guide →</a>
+    </section>
+
+    <section id="mcp">
+      <h2>MCP for AI agents<a class="anchor" href="#mcp">#</a></h2>
+      <p>Run TextLens as a Model Context Protocol server so Claude and other MCP clients can OCR, inspect and extract from files inside a workspace folder you choose.</p>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>pip install <span class="s">"textlens-ocr[mcp]"</span>
+textlens mcp --workspace .</pre></div>
+      <p>Add it to your client's config, for example <code>.mcp.json</code>:</p>
+      <div class="code"><div class="code-bar"><span>json</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>{
+  <span class="s">"mcpServers"</span>: {
+    <span class="s">"textlens"</span>: {
+      <span class="s">"command"</span>: <span class="s">"textlens"</span>,
+      <span class="s">"args"</span>: [<span class="s">"mcp"</span>, <span class="s">"--workspace"</span>, <span class="s">"."</span>]
+    }
+  }
+}</pre></div>
+      <p>Tools: <code>ocr_document</code>, <code>inspect_document</code>, <code>extract_tables</code>, <code>extract_fields</code>.</p>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/tree/main/examples/mcp" target="_blank" rel="noopener">MCP example →</a>
+    </section>
+
+    <section id="plugins">
+      <h2>Custom backends<a class="anchor" href="#plugins">#</a></h2>
+      <p>Add your own engine by subclassing <code>OCRBackend</code> and registering a <code>ModelSpec</code> describing its hardware, tasks and license — the router then treats it like any built-in model. Packages can register through the <code>textlens.models</code> entry point.</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre><span class="k">from</span> textlens <span class="k">import</span> OCRBackend, ModelSpec, register_spec
+
+<span class="k">class</span> <span class="f">MyBackend</span>(OCRBackend):
+    <span class="k">def</span> <span class="f">_load</span>(self): ...
+    <span class="k">def</span> <span class="f">_recognize</span>(self, image, **kwargs): ...   <span class="c"># return a PageOCR</span></pre></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/tree/main/examples/custom_backend" target="_blank" rel="noopener">Custom backend example →</a>
+    </section>
+
+    <!-- ── Deploy ──────────────────────────────────────── -->
+    <section id="edge">
+      <h2>Edge &amp; Raspberry Pi<a class="anchor" href="#edge">#</a></h2>
+      <p>The same API runs on a Raspberry Pi 4/5, a Jetson or an industrial PC. The edge stack is PP-OCRv6 on ONNX Runtime with numpy and Pillow — no PyTorch, no OpenCV.</p>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>pip install textlens-ocr
+textlens setup --profile edge --yes     <span class="c"># download + verify the model, save the profile</span>
+textlens ocr sample.jpg</pre></div>
+      <div class="callout"><strong>Offline devices:</strong> install once with network, or copy <code>~/.cache/textlens/models</code> from another machine, then set <code>TEXTLENS_OFFLINE=1</code>.</div>
+      <p>Use a 64-bit OS (Raspberry Pi OS 64-bit or Ubuntu arm64) — ONNX Runtime has no 32-bit ARM wheels.</p>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/deployment/raspberry-pi.md" target="_blank" rel="noopener">Raspberry Pi guide →</a>
+    </section>
+
+    <section id="gpu">
+      <h2>NVIDIA GPUs<a class="anchor" href="#gpu">#</a></h2>
+      <p>Install a CUDA build of PyTorch first, then the <code>gpu</code> extra. <code>textlens doctor</code> prints the exact command for your driver.</p>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>pip install torch --index-url https://download.pytorch.org/whl/cu124
+pip install <span class="s">"textlens-ocr[gpu]"</span>
+textlens doctor --deep
+textlens models install glm-ocr</pre></div>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>OCR(profile=<span class="s">"balanced"</span>)       <span class="c"># PP-OCR for easy pages, GLM-OCR for hard ones</span>
+OCR(model=<span class="s">"glm-ocr"</span>)          <span class="c"># always use GLM-OCR</span></pre></div>
+      <p>To run PP-OCR on the GPU too, replace <code>onnxruntime</code> with <code>onnxruntime-gpu</code>.</p>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/deployment/gpu.md" target="_blank" rel="noopener">GPU guide →</a>
+    </section>
+
+    <section id="docker">
+      <h2>Docker &amp; Kubernetes<a class="anchor" href="#docker">#</a></h2>
+      <p>Docker is optional. The CPU image contains the server and the default model, with no PyTorch.</p>
+      <div class="code"><div class="code-bar"><span>bash</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre>git clone https://github.com/Srevarshan05/textlens.git &amp;&amp; cd textlens
+docker build -f deploy/docker/Dockerfile -t textlens .
+docker run -p 8000:8000 -e TEXTLENS_API_KEYS=change-me textlens</pre></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td>deploy/docker/Dockerfile</td><td>CPU server image, tested in CI</td></tr>
+          <tr><td>deploy/docker/Dockerfile.gpu</td><td>CUDA PyTorch base with the gpu extra (reference)</td></tr>
+          <tr><td>deploy/docker/Dockerfile.jetson</td><td>L4T JetPack base (reference)</td></tr>
+          <tr><td>deploy/docker/docker-compose.yml</td><td>Server with persistent model and data volumes</td></tr>
+          <tr><td>deploy/kubernetes/textlens.yaml</td><td>Deployment, Service, health probes and autoscaler</td></tr>
+        </tbody>
+      </table></div>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/deployment/docker.md" target="_blank" rel="noopener">Docker guide →</a>
+    </section>
+
+    <section id="migration">
+      <h2>Upgrading from 0.x<a class="anchor" href="#migration">#</a></h2>
+      <p>Your 0.x code keeps working: <code>OCR(model=…).read()</code>, the <code>textlens read</code> command and the <code>/api/v1</code> endpoints are still there. For new code, call the OCR object directly — it returns the full result instead of a string.</p>
+      <div class="code"><div class="code-bar"><span>python</span><button class="copy-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copy</span></button></div>
+<pre><span class="c"># before (0.x)</span>
+text = OCR(model=<span class="s">"glm-ocr"</span>).read(<span class="s">"scan.png"</span>)
+
+<span class="c"># after (2.0)</span>
+result = OCR()(<span class="s">"scan.png"</span>)       <span class="c"># routed; runs without a GPU</span>
+text = result.text</pre></div>
+      <p>The default model changed from GLM-OCR (GPU) to PP-OCRv6 (CPU). To keep GLM-OCR, pass <code>model="glm-ocr"</code> or use <code>profile="accurate"</code> with it installed.</p>
+      <a class="more" href="https://github.com/Srevarshan05/textlens/blob/main/docs/migration.md" target="_blank" rel="noopener">Migration guide →</a>
+    </section>
+  </article>
+
+  <aside class="toc" aria-label="Resources">
+    <h6>Resources</h6>
+    <a href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noopener">GitHub repository</a>
+    <a href="https://pypi.org/project/textlens-ocr/" target="_blank" rel="noopener">PyPI package</a>
+    <a href="https://github.com/Srevarshan05/textlens/tree/main/docs" target="_blank" rel="noopener">Full docs (Markdown)</a>
+    <a href="https://github.com/Srevarshan05/textlens/tree/main/examples" target="_blank" rel="noopener">Examples</a>
+    <a href="https://github.com/Srevarshan05/textlens/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+    <a href="https://github.com/Srevarshan05/textlens/issues/new" target="_blank" rel="noopener">Report an issue</a>
   </aside>
-
 </div>
 
-<script>
-  // Mobile Navigation Drawer Toggle
-  const menuBtn = document.getElementById('docMenuBtn');
-  const drawer = document.getElementById('docDrawer');
+<footer class="site-footer">
+  <div class="container footer-bottom" style="margin-top:0;border-top:0;padding-top:0">
+    <span>© 2026 TextLens contributors · MIT License</span>
+    <span><a href="./">Home</a> · <a href="https://github.com/Srevarshan05/textlens" target="_blank" rel="noopener">GitHub</a> · <a href="https://pypi.org/project/textlens-ocr/" target="_blank" rel="noopener">PyPI</a></span>
+  </div>
+</footer>
 
-  if (menuBtn && drawer) {
-    menuBtn.addEventListener('click', () => {
-      const open = drawer.classList.toggle('is-open');
-      menuBtn.setAttribute('aria-expanded', String(open));
-    });
-
-    drawer.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        drawer.classList.remove('is-open');
-      });
-    });
-  }
-</script>
+<script src="app.js"></script>
 </body>
 </html>

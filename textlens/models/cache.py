@@ -44,8 +44,14 @@ class ModelCache:
     """
 
     def __init__(self, root: Optional[Path] = None) -> None:
-        self.root: Path = root or _CACHE_ROOT
-        self.root.mkdir(parents=True, exist_ok=True)
+        # Resolved lazily from TEXTLENS_HOME / TEXTLENS_MODELS_DIR so tests,
+        # containers and read-only deployments can relocate the cache.  The
+        # directory is created on first write, never as an import side effect.
+        if root is None:
+            from textlens.config import get_settings
+
+            root = get_settings().models_dir
+        self.root: Path = Path(root)
 
     # ------------------------------------------------------------------
     # Path helpers
