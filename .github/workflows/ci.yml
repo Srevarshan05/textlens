@@ -17,14 +17,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "${{ matrix.python }}", cache: pip }
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
       - run: pip install -e ".[dev,documents]"
       - name: Cache PP-OCRv6 weights
         uses: actions/cache@v4
-        with: { path: .models, key: ppocrv6-small-oar-ocr-v0.7.0 }
+        with:
+          path: .models
+          key: ppocrv6-small-oar-ocr-v0.7.0
       - name: Install default model (SHA-256 verified)
         run: textlens models install ppocrv6-small
-        env: { TEXTLENS_MODELS_DIR: ${{ github.workspace }}/.models }
+        env:
+          TEXTLENS_MODELS_DIR: ${{ github.workspace }}/.models
       - run: pytest -q
 
   lint:
@@ -32,7 +37,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
       - run: pip install ruff
       - run: ruff check textlens --select F,E9 --output-format github
 
@@ -41,7 +47,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+        with:
+          python-version: "3.12"
       - run: pip install build && python -m build
       - name: Install wheel in a clean venv and smoke-test the CLI
         run: |
