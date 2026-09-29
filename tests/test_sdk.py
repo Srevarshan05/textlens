@@ -3,7 +3,13 @@ Tests for textlens.sdk module using standard unittest.
 """
 
 import unittest
-from textlens import TextLens
+
+import pytest
+
+# The 0.x SDK wraps GLM-OCR and needs PyTorch (the "gpu" extra).
+pytest.importorskip("torch")
+
+from textlens import TextLens  # noqa: E402
 
 
 class TestSDK(unittest.TestCase):

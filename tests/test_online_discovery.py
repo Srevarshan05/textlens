@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
+# Live discovery is part of the optional "catalog" extra.
+pytest.importorskip("huggingface_hub")
+
 from types import SimpleNamespace
 from unittest.mock import patch
 
