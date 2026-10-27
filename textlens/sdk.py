@@ -8,8 +8,6 @@ using zai-org/GLM-OCR with real-time progress, CUDA GPU acceleration, and optimi
 
 from __future__ import annotations
 
-import os
-import sys
 import time
 import logging
 import tempfile
@@ -32,8 +30,8 @@ except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
 from textlens.hardware import get_hardware_info, is_cuda_available, HardwareInfo
-from textlens.dependencies import check_dependencies, ensure_dependencies
-from textlens.progress import ProgressTracker, print_step
+from textlens.dependencies import ensure_dependencies
+from textlens.progress import ProgressTracker
 
 logger = logging.getLogger("textlens.sdk")
 
@@ -58,7 +56,7 @@ class TextLens:
         device: Optional[str] = None,
         torch_dtype: Optional[torch.dtype] = None,
         auto_load: bool = True,
-        auto_fix_dependencies: bool = True,
+        auto_fix_dependencies: bool = False,
         show_progress: bool = True
     ) -> None:
         """
@@ -75,15 +73,18 @@ class TextLens:
         auto_load : bool
             Whether to load model weights into memory immediately on initialization.
         auto_fix_dependencies : bool
-            Automatically install missing dependencies if needed.
+            If ``True``, run ``pip install`` for missing packages. Defaults to
+            ``False``: TextLens never modifies your environment implicitly;
+            missing packages are reported with the exact install command.
         show_progress : bool
             Whether to display real-time terminal progress indicators.
         """
         self.model_id = model_id
         self.show_progress = show_progress
         
-        # Check environment dependencies
-        ensure_dependencies(auto_install=auto_fix_dependencies, verbose=show_progress)
+        # Check environment dependencies (report only unless explicitly allowed)
+        if auto_fix_dependencies:
+            ensure_dependencies(auto_install=True, verbose=show_progress)
 
         # Hardware auto-detection
         hw = get_hardware_info()
@@ -196,7 +197,7 @@ class TextLens:
         image_source: Union[str, Path, Image.Image],
         prompt: str = "Text Recognition:",
         max_new_tokens: int = 512,
-        temperature: float = 0.7,
+        temperature: float = 0.0,
         top_p: float = 0.95
     ) -> str:
         """

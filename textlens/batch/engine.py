@@ -15,9 +15,7 @@ This module provides the `BatchOCR` class which:
 
 from __future__ import annotations
 
-import itertools
 import logging
-import os
 import threading
 import time
 import uuid
@@ -62,8 +60,8 @@ class BatchOCR:
 
     def __init__(
         self,
-        model: str = "glm-ocr",
-        workers: int = 4,
+        model: Optional[str] = None,
+        workers: int = 2,
         output_format: str = "json",
         output_dir: Union[str, Path] = "./batch_output",
         retries: int = 2,
@@ -75,6 +73,9 @@ class BatchOCR:
         recursive: bool = True,
         max_new_tokens: int = 2048,
         queue_backend: Optional[BaseBatchQueue] = None,
+        profile: Optional[str] = None,
+        resume: bool = False,
+        ocr: Any = None,
     ) -> None:
         self._config = BatchJobConfig(
             input_source=".",
@@ -90,11 +91,13 @@ class BatchOCR:
             dashboard_host=dashboard_host,
             recursive=recursive,
             max_new_tokens=max_new_tokens,
+            profile=profile,
+            resume=resume,
         )
         self._queue: BaseBatchQueue = queue_backend or MemoryBatchQueue()
         self._exporter = StructuredExporter(output_dir, output_format)
         self._metrics = JobMetrics(
-            model_id=model,
+            model_id=model or "auto",
             output_format=output_format,
             target_workers=workers,
         )
@@ -113,14 +116,18 @@ class BatchOCR:
         self._dashboard_thread: Optional[threading.Thread] = None
         self._dashboard_server: Any = None
         self._log_buffer: List[str] = []
-        self._ocr_instance: Any = None           # Lazy loaded per-worker
+        # One engine shared by every worker: the backend pool loads each
+        # model once, so N workers never hold N copies of the weights.
+        self._ocr_instance: Any = ocr
+        self._ocr_lock = threading.Lock()
+        self.skipped = 0
 
         # ── callbacks ──────────────────────────────────────────────────
         self._on_file_complete: Optional[Callable[[BatchTask], None]] = None
         self._on_file_failed: Optional[Callable[[BatchTask], None]] = None
 
         self._log("BatchOCR initialized. model=%s workers=%d format=%s",
-                  model, workers, output_format)
+                  model or "auto", workers, output_format)
 
     # ── Public Run API ──────────────────────────────────────────────────────
 
@@ -143,19 +150,36 @@ class BatchOCR:
 
         self._log("Discovered %d file(s) to process.", len(files))
 
-        # ── 2. Enqueue tasks ────────────────────────────────────────────
+        # ── 2. Enqueue tasks (resume skips files already exported) ───────
+        skipped_tasks: List[BatchTask] = []
         for path in files:
             task = BatchTask(
                 task_id=str(uuid.uuid4()),
                 source_path=path,
                 max_retries=self._config.retries,
             )
+            if self._config.resume:
+                existing = self._exporter.output_path_for(task, self._config.output_format)
+                if existing.exists() and existing.stat().st_size > 0:
+                    task.status = TaskStatus.COMPLETED
+                    task.skipped = True
+                    task.output_path = existing
+                    skipped_tasks.append(task)
+                    continue
             self._queue.enqueue(task)
+        self.skipped = len(skipped_tasks)
+        if skipped_tasks:
+            self._log("Resume: skipping %d file(s) with existing output.", len(skipped_tasks))
+            done = {t.source_path for t in skipped_tasks}
+            files = [f for f in files if f not in done]
 
         with self._metrics_lock:
             self._metrics.total_files = len(files)
             self._metrics.queued_files = len(files)
             self._metrics.status = BatchStatus.RUNNING
+        if not files:
+            self._log("Nothing to do: every file already has output (resume).")
+            return skipped_tasks
 
         self._start_time = time.time()
 
@@ -185,7 +209,7 @@ class BatchOCR:
 
         # ── 6. Finalise metrics & manifest ──────────────────────────────
         elapsed = time.time() - self._start_time
-        all_tasks = self._queue.get_all_tasks()
+        all_tasks = self._queue.get_all_tasks() + skipped_tasks
 
         with self._metrics_lock:
             self._metrics.elapsed_time_sec = elapsed
@@ -193,7 +217,7 @@ class BatchOCR:
                 self._metrics.status = BatchStatus.COMPLETED
 
         # Export consolidated manifest
-        manifest = self._exporter.export_summary_manifest(all_tasks, self._config.model_id, elapsed)
+        manifest = self._exporter.export_summary_manifest(all_tasks, self._config.model_id or "auto", elapsed)
         self._log("Batch complete. %d processed, %d failed. Manifest: %s",
                   self._metrics.processed_files,
                   self._metrics.failed_files,
@@ -335,13 +359,24 @@ class BatchOCR:
 
     # ── Internal Helpers ────────────────────────────────────────────────────
 
+    def _get_ocr(self) -> Any:
+        """Create the shared engine once (thread-safe)."""
+        if self._ocr_instance is None:
+            with self._ocr_lock:
+                if self._ocr_instance is None:
+                    from textlens.core.engine import OCR
+
+                    self._ocr_instance = OCR(
+                        model=self._config.model_id,
+                        device=self._config.device,
+                        profile=self._config.profile,
+                        dpi=self._config.dpi,
+                    )
+        return self._ocr_instance
+
     def _worker_loop(self) -> None:
         """Main loop executed by each worker thread."""
-        from textlens.ocr import OCR
-        ocr = OCR(
-            model=self._config.model_id,
-            device=self._config.device,
-        )
+        ocr = self._get_ocr()
 
         while not self._stop_event.is_set():
             # ── Pause gate ─────────────────────────────────────
@@ -369,34 +404,22 @@ class BatchOCR:
 
             try:
                 t0 = time.time()
-                kwargs: Dict[str, Any] = {
-                    "dpi": self._config.dpi,
-                    "max_new_tokens": self._config.max_new_tokens,
-                }
+                kwargs: Dict[str, Any] = {"max_new_tokens": self._config.max_new_tokens}
                 if self._config.prompt:
                     kwargs["prompt"] = self._config.prompt
 
-                result = ocr.read(str(task.source_path), **kwargs)
+                result = ocr(str(task.source_path), **kwargs)
 
                 task.completed_at = time.time()
                 task.duration_sec = task.completed_at - t0
-                task.result_text = result
+                task.result = result
+                task.result_text = result.text
+                task.page_count = result.page_count
                 task.status = TaskStatus.COMPLETED
 
-                # ── Count PDF pages ────────────────────────────
-                if task.source_path.suffix.lower() == ".pdf":
-                    try:
-                        import pypdfium2 as pdfium
-                        doc = pdfium.PdfDocument(str(task.source_path))
-                        task.page_count = len(doc)
-                        doc.close()
-                    except Exception:
-                        task.page_count = 1
-                else:
-                    task.page_count = 1
-
                 # ── Export result ──────────────────────────────
-                self._exporter.export_task(task, self._config.model_id, self._config.output_format)
+                used = self._config.model_id or ",".join(result.provenance.models) or "native"
+                self._exporter.export_task(task, used, self._config.output_format)
 
                 # ── Update metrics ─────────────────────────────
                 with self._metrics_lock:

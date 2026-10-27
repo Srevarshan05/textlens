@@ -8,7 +8,7 @@ Serves a real-time web dashboard at http://localhost:8765 (default) with:
 - Clean overview layout with resizable panels (Tasks, Logs, System)
 - Real live CPU history graph (no dummy sparklines)
 - Premium vector SVG icons throughout (zero emojis)
-- PDF Batch Report Exporter (downloads standard .pdf document when job is done)
+- PDF Batch Report Exporter (downloads standard .pdf document when job completes)
 - Persistent server ("Close & Return to Terminal" button)
 - Interactive controls: pause, resume, cancel, retry failed
 - Runtime reconfiguration: workers, format, retries
@@ -1274,10 +1274,16 @@ function connectStream() {
 }
 
 function apiAction(endpoint) {
-  fetch(endpoint, { method: 'POST' })
+  fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
     .then(r => r.json())
-    .then(d => showToast(d.message || 'Action executed'))
-    .catch(() => showToast('Action failed', false));
+    .then(d => {
+      showToast(d.message || 'Action executed', d.ok !== false);
+      fetch('/api/status').then(r => r.json()).then(m => updateMetrics(m)).catch(() => {});
+    })
+    .catch(err => showToast('Action failed: ' + err, false));
 }
 
 function reconfigure() {
@@ -1314,11 +1320,14 @@ function downloadReport() {
 
 function closeDashboardAndExit() {
   if (confirm("Close dashboard and return to terminal?")) {
-    fetch('/api/close-dashboard', { method: 'POST' })
+    fetch('/api/close-dashboard', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
       .then(r => r.json())
       .then(d => {
         showToast('Dashboard closed. Returning to terminal...');
-        setTimeout(() => { window.close(); }, 1200);
+        setTimeout(() => { window.close(); }, 1000);
+      })
+      .catch(() => {
+        showToast('Dashboard closed.');
       });
   }
 }
@@ -1338,6 +1347,11 @@ class _DashboardHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         # Suppress default HTTP server logging — BatchOCR has its own logger
         pass
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(200)
+        self._cors_headers()
+        self.end_headers()
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
@@ -1365,6 +1379,9 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
 
+        content_len = int(self.headers.get("Content-Length", 0))
+        post_body = self.rfile.read(content_len) if content_len > 0 else b""
+
         if path == "/api/pause":
             self.engine.pause()
             self._serve_json({"ok": True, "message": "Job paused successfully"})
@@ -1379,9 +1396,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
             self._serve_json({"ok": True, "message": f"Re-queued {n} failed task(s)"})
         elif path == "/api/reconfigure":
             try:
-                length = int(self.headers.get("Content-Length", 0))
-                body = self.rfile.read(length).decode("utf-8")
-                data: Dict = json.loads(body) if body else {}
+                data: Dict = json.loads(post_body.decode("utf-8")) if post_body else {}
                 self.engine.reconfigure(
                     workers=data.get("workers"),
                     output_format=data.get("output_format"),
@@ -1393,6 +1408,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         elif path == "/api/close-dashboard":
             self.engine.signal_dashboard_close()
             self._serve_json({"ok": True, "message": "Dashboard closed. Returning to terminal..."})
+            threading.Thread(target=self.server.shutdown, daemon=True).start()
         else:
             self.send_error(404, "Not Found")
 
@@ -1437,7 +1453,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
         tasks = self.engine.get_tasks()
 
         # Check if job is still active
-        is_running = m.status == BatchStatus.RUNNING or any(t.status in ("QUEUED", "PROCESSING", "RETRYING") for t in tasks)
+        is_running = m.status == "RUNNING" or any(t.status in ("QUEUED", "PROCESSING", "RETRYING") for t in tasks)
         if is_running:
             self._serve_json({
                 "ok": False,

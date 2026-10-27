@@ -3,7 +3,13 @@ Tests for textlens.server module using standard unittest.
 """
 
 import unittest
-from textlens import TextLens
+
+import pytest
+
+# This 0.x test serves a legacy TextLens engine, which needs PyTorch.
+pytest.importorskip("torch")
+
+from textlens import TextLens  # noqa: E402
 
 try:
     from fastapi.testclient import TestClient

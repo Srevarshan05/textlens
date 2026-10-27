@@ -1,16 +1,15 @@
 """
 textlens.backends
-──────────────────
-Concrete model backend implementations.
+─────────────────
+OCR engine adapters.  Every adapter implements
+:class:`textlens.backends.base.OCRBackend` and is referenced from a model
+spec (``adapter="module:Class"``); nothing here is imported until a model
+is used.
 
-Each backend lives in its own module and implements the
-``textlens.models.base.BaseOCRModel`` interface.
-
-Currently registered backends
-------------------------------
-- ``glm_ocr`` → GLMOCRBackend (default)
-
-Future backends should be added here without touching the public OCR API.
+Bundled adapters
+    onnx.ppocr.PPOCRBackend            PP-OCRv6 on ONNX Runtime (edge / default)
+    transformers_vlm.*Adapter          GLM-OCR, LightOnOCR, HunyuanOCR, SmolVLM
+    openai_compat.OpenAICompatibleBackend  any OpenAI-compatible server (vLLM…)
 """
 
 from __future__ import annotations

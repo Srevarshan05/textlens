@@ -7,7 +7,7 @@ This backend wraps the original TextLens GLM-OCR inference logic from
 ``textlens.sdk.TextLens`` inside the ``BaseOCRModel`` interface so it can
 be managed uniformly through the model registry, downloader, and OCR API.
 
-HuggingFace repository : THUDM/glm-ocr
+HuggingFace repository : zai-org/GLM-OCR
 Cache path             : ~/.cache/textlens/models/glm-ocr/
 """
 
@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import logging
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from textlens.models.base import BaseOCRModel
@@ -33,13 +32,6 @@ try:
     _TORCH = True
 except ImportError:
     _TORCH = False
-
-try:
-    from PIL import Image as PILImage
-
-    _PIL = True
-except ImportError:
-    _PIL = False
 
 try:
     from transformers import AutoProcessor, GlmOcrForConditionalGeneration
@@ -186,7 +178,7 @@ class GLMOCRBackend(BaseOCRModel):
         image: Any,
         prompt: str = "Text Recognition:",
         max_new_tokens: int = 512,
-        temperature: float = 0.7,
+        temperature: float = 0.0,
         top_p: float = 0.95,
         dpi: int = 200,
         page: Optional[Union[int, List[int]]] = None,
@@ -203,7 +195,8 @@ class GLMOCRBackend(BaseOCRModel):
         max_new_tokens : int, optional
             Maximum number of tokens to generate. Defaults to ``512``.
         temperature : float, optional
-            Sampling temperature (0 = greedy). Defaults to ``0.7``.
+            Sampling temperature (0 = greedy). Defaults to ``0.0`` so OCR
+            output is deterministic and reproducible.
         top_p : float, optional
             Nucleus sampling probability. Defaults to ``0.95``.
         dpi : int, optional

@@ -1,31 +1,23 @@
 # TextLens examples
 
-Each script demonstrates one feature and is intended to be run from the repository root after installation:
+Run from the repository root after `pip install -e .` (add extras where noted).
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[inference,server,ui]"
-```
+| Folder | Example | Needs |
+|---|---|---|
+| `basic/` | `quickstart.py` — one call, text + provenance · `result_schema.py` — pages, blocks, boxes, exports | core |
+| `pdf/` | `selective_ocr.py` — inspect, stream pages, lazy document | core |
+| `tables/` | `export_tables.py` — tables to CSV/Markdown | core (VLM for scanned tables) |
+| `rag/` | `chunks.py` — citation-ready chunks | core |
+| `extraction/` | `invoice_fields.py` — schema → JSON with boxes | core |
+| `batch/` | `folder.py` — shared model, isolated failures | core |
+| `server/` | `client.py` — sync + async jobs against `textlens serve` | server extra (on the server) |
+| `vllm/` | `served_model.py` — route pages to a vLLM-hosted VLM | an OpenAI-compatible endpoint |
+| `edge/` | `camera_loop.py` — camera frames on a Pi/Jetson | core + OpenCV for capture |
+| `anpr/` | `plates.py` — plates from images or video, tracking | anpr extra |
+| `custom_backend/` | `my_engine.py` — plug in your own engine | core |
+| `mcp/` | MCP configuration for AI agents | mcp extra |
+| `legacy/` | the 0.x examples (still supported) | as noted there |
 
-| Script | Purpose | Downloads/loads a model? |
-| --- | --- | --- |
-| `00_environment_check.py` | Inspect Python, CUDA, GPU, and dependency status | No |
-| `01_model_catalog.py` | List models and inspect a selected model | No |
-| `02_basic_ocr.py IMAGE` | OCR one local image with the modern `OCR` API | Yes |
-| `03_custom_prompt.py IMAGE` | OCR with an instruction prompt | Yes |
-| `04_pdf_ocr.py PDF` | Extract text page-by-page with the legacy SDK | Yes |
-| `05_structured_extraction.py IMAGE` | Table, formula, and JSON helpers | Yes |
-| `06_device_switching.py IMAGE` | Load GLM-OCR then switch CPU/CUDA | Yes |
-| `07_batch_folder.py FOLDER` | BatchOCR folder processing and exports | Yes |
-| `08_batch_callbacks.py FOLDER` | Batch callbacks and result filtering | Yes |
-| `09_rest_server.py` | Start the local REST API | Yes |
-| `10_rest_client.py IMAGE` | Submit a file to a running REST API | No (server does OCR) |
-| `11_live_model_discovery.py` | Search live Hugging Face OCR/VLM candidates for detected hardware | No (`catalog` extra only) |
-
-Start with `00_environment_check.py`. For a CUDA-enabled machine, `CUDA available: True` must appear before expecting GPU acceleration. The first model-based run can download several GB of model weights; subsequent runs use the local cache.
-
-For a safe first model run, use the smaller model:
-
-```powershell
-python examples\02_basic_ocr.py .\test-image-ocr.png --model smolvlm --device cuda
-```
+Deployment examples live in `deploy/` (Docker, Compose, Kubernetes).
+Benchmark your own data with `textlens benchmark` (see
+`docs/evaluation/benchmarking.md`).

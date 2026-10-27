@@ -163,6 +163,16 @@ def _official_metadata(repo_id: str) -> Any:
     )
 
 
+def _official_vram_guide(meta: Any) -> float:
+    """Recommended VRAM for a registered model (falls back to the minimum)."""
+    from textlens.models.specs import find_spec
+
+    spec = find_spec(meta.id)
+    if spec is not None and spec.recommended_vram_gb:
+        return float(spec.recommended_vram_gb)
+    return float(meta.min_vram_gb)
+
+
 def _safetensors_parameter_count(api: Any, repo_id: str) -> Optional[float]:
     """Read an exact parameter count from published safetensors metadata.
 
@@ -299,7 +309,7 @@ def discover_models(
 
     try:
         from huggingface_hub import HfApi
-        from huggingface_hub.utils import disable_progress_bars
+        from huggingface_hub.utils import disable_progress_bars, enable_progress_bars
     except ImportError as exc:
         raise ImportError(
             "Online model discovery requires the catalog extra. Install with: "
@@ -320,13 +330,19 @@ def discover_models(
         # Safetensors inspection is read-only, but the Hub client otherwise
         # emits progress bars and a Windows symlink warning into the CLI.
         # TextLens keeps this advisor output focused on the recommendation.
-        with warnings.catch_warnings(), disable_progress_bars():
+        # ``disable_progress_bars`` is a plain function (not a context
+        # manager) in current huggingface_hub releases.
+        with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore",
                 message=".*symlinks by default.*",
                 category=UserWarning,
             )
-            published_counts = _published_parameter_counts(api, raw_models)
+            disable_progress_bars()
+            try:
+                published_counts = _published_parameter_counts(api, raw_models)
+            finally:
+                enable_progress_bars()
         candidates: List[DiscoveredModel] = []
         for model in raw_models:
             repo_id = str(getattr(model, "modelId", "unknown"))
@@ -339,7 +355,7 @@ def discover_models(
             # Official registry entries use their tested minimum VRAM; all
             # third-party candidates use a deliberately conservative estimate.
             estimated_vram = (
-                official.min_vram_gb
+                _official_vram_guide(official)
                 if official is not None
                 else _estimate_vram_gb(params_b)
             )

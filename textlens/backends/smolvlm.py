@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from textlens.models.base import BaseOCRModel
@@ -29,13 +28,6 @@ try:
     _TORCH = True
 except ImportError:
     _TORCH = False
-
-try:
-    from PIL import Image as PILImage
-
-    _PIL = True
-except ImportError:
-    _PIL = False
 
 try:
     from transformers import AutoProcessor

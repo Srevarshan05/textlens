@@ -14,18 +14,15 @@ Tests cover:
 from __future__ import annotations
 
 import json
-import tempfile
 import time
 import threading
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from textlens.batch.types import (
     BatchStatus,
     BatchTask,
-    BatchJobConfig,
     JobMetrics,
     TaskStatus,
 )

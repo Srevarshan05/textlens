@@ -26,10 +26,9 @@ Usage
 from __future__ import annotations
 
 import logging
-from typing import List, Optional
+from typing import List
 
 from textlens.models.cache import ModelCache
-from textlens.models.exceptions import UnknownModelError
 from textlens.models.metadata import ModelMetadata
 from textlens.models.registry import ModelRegistry
 
@@ -119,7 +118,6 @@ class ModelManager:
         try:
             from rich.panel import Panel
             from rich.table import Table
-            from rich.text import Text
             from rich import box
 
             table = Table(
@@ -355,7 +353,7 @@ class ModelManager:
             print(f"  Installed   : Yes ({disk_gb:.2f} GB)")
             print(f"  Cache Path  : {cache_path}")
         else:
-            print(f"  Installed   : No")
+            print("  Installed   : No")
         dl_size = f"~{meta.download_size_gb} GB" if meta.download_size_gb else "Unknown"
         print(f"  DL Size     : {dl_size}")
         print(f"\n  {meta.description}")

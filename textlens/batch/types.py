@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -48,6 +48,8 @@ class BatchTask:
     result_text: Optional[str] = None
     output_path: Optional[Path] = None
     page_count: int = 0
+    result: Any = field(default=None, repr=False)  # textlens.Result (2.0)
+    skipped: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert task to a JSON-serializable dictionary."""
@@ -66,6 +68,9 @@ class BatchTask:
             "result_text_preview": (self.result_text[:150] + "...") if self.result_text and len(self.result_text) > 150 else self.result_text,
             "output_path": str(self.output_path) if self.output_path else None,
             "page_count": self.page_count,
+            "skipped": self.skipped,
+            "confidence": getattr(self.result, "confidence", None),
+            "models": list(getattr(getattr(self.result, "provenance", None), "models", []) or []),
         }
 
 
@@ -120,8 +125,8 @@ class BatchJobConfig:
     """Configuration options for a BatchOCR instance."""
     input_source: Union[str, Path, List[Union[str, Path]]]
     output_dir: Union[str, Path] = "./batch_output"
-    model_id: str = "glm-ocr"
-    workers: int = 4
+    model_id: Optional[str] = None  # None = routed per page (2.0)
+    workers: int = 2
     output_format: str = "json"  # "json", "markdown", "csv", "txt"
     retries: int = 2
     dpi: int = 200
@@ -132,3 +137,5 @@ class BatchJobConfig:
     recursive: bool = True
     prompt: Optional[str] = None
     max_new_tokens: int = 2048
+    profile: Optional[str] = None
+    resume: bool = False

@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1.7
+# TextLens — NVIDIA GPU image: document VLMs (PyTorch/Transformers) + CUDA ONNX Runtime.
+#
+#   docker build -f deploy/docker/Dockerfile.gpu -t textlens:gpu .
+#   docker run --gpus all -p 8000:8000 -v textlens-models:/models textlens:gpu
+#
+# Requires the NVIDIA Container Toolkit on the host. The base image pins CUDA;
+# choose a tag compatible with your driver (`nvidia-smi` shows the max CUDA version).
+
+ARG BASE=pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+
+FROM python:3.11-slim AS build
+WORKDIR /src
+COPY pyproject.toml README.md LICENSE THIRD_PARTY_NOTICES.md ./
+COPY textlens ./textlens
+RUN pip install --no-cache-dir build && python -m build --wheel --outdir /wheels
+
+FROM ${BASE} AS runtime
+ARG EXTRAS=server,documents,gpu
+ARG PRELOAD_MODELS=ppocrv6-small
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TEXTLENS_HOME=/data \
+    TEXTLENS_MODELS_DIR=/models \
+    TEXTLENS_HOST=0.0.0.0 \
+    TEXTLENS_PORT=8000 \
+    TEXTLENS_LOG_FORMAT=json \
+    TEXTLENS_PROFILE=balanced
+
+RUN useradd --create-home --uid 10001 textlens \
+ && mkdir -p /data /models /work && chown -R textlens:textlens /data /models /work
+COPY --from=build /wheels /wheels
+# torch comes from the base image; swap CPU onnxruntime for the CUDA build.
+RUN WHEEL="$(ls /wheels/*.whl)" && pip install --no-cache-dir "${WHEEL}[${EXTRAS}]" \
+ && pip uninstall -y onnxruntime && pip install --no-cache-dir onnxruntime-gpu \
+ && rm -rf /wheels
+
+USER textlens
+RUN for m in ${PRELOAD_MODELS}; do textlens models install "$m"; done
+WORKDIR /work
+VOLUME ["/data", "/models"]
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=4)" || exit 1
+ENTRYPOINT ["textlens"]
+CMD ["serve", "--warmup"]

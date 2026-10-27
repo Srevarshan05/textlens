@@ -22,19 +22,21 @@ EXPECTED_IDS = {
 
 
 class TestModelRegistry:
-    def test_all_returns_four_models(self):
+    def test_all_contains_legacy_models(self):
+        # 2.0 grew the catalog; every 0.x model is still registered.
         models = ModelRegistry.all()
-        assert len(models) == 4
+        assert len(models) >= 4
 
     def test_supported_ids_are_correct(self):
         ids = set(ModelRegistry.supported_ids())
-        assert ids == EXPECTED_IDS
+        assert EXPECTED_IDS <= ids
+        assert "ppocrv6-small" in ids
 
     def test_get_returns_metadata(self):
         meta = ModelRegistry.get("glm-ocr")
         assert isinstance(meta, ModelMetadata)
         assert meta.id == "glm-ocr"
-        assert meta.display_name == "GLM OCR"
+        assert meta.display_name == "GLM-OCR"
 
     def test_get_normalized_aliases(self):
         assert ModelRegistry.get("LightOnOCR").id == "lighton-ocr"
@@ -49,9 +51,10 @@ class TestModelRegistry:
         assert "gpt-vision" in str(exc_info.value)
         assert "glm-ocr" in str(exc_info.value)
 
-    def test_default_is_glm_ocr(self):
+    def test_default_is_cpu_friendly_engine(self):
+        # 2.0 default runs everywhere (ONNX PP-OCRv6); VLMs are routed to.
         default = ModelRegistry.default()
-        assert default.id == "glm-ocr"
+        assert default.id == "ppocrv6-small"
         assert default.is_default is True
 
     def test_only_one_default(self):
@@ -78,7 +81,8 @@ class TestModelRegistry:
 
     def test_glm_ocr_min_vram(self):
         meta = ModelRegistry.get("glm-ocr")
-        assert meta.min_vram_gb == 6.0
+        assert meta.min_vram_gb == 4.0
+        assert ModelRegistry.spec("glm-ocr").recommended_vram_gb == 6.0
 
     def test_smolvlm_min_vram(self):
         meta = ModelRegistry.get("smolvlm")
